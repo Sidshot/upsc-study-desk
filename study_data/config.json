@@ -1,0 +1,7 @@
+{
+    "version": "0.1.0",
+    "phase": 0,
+    "dataDirectory": "./study_data",
+    "created": "2026-01-05",
+    "notes": "Phase 0 - Skeleton app, no database yet"
+}

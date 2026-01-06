@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPSC Prep</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/vendor/plyr.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Toggle -->
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle Menu">
+            ☰
+        </button>
+
+        <!-- Full Screen Toggle -->
+        <button id="fullscreen-toggle" class="btn-pill fixed-toggle-btn" aria-label="Toggle Full Screen">
+            ⛶ Full Screen
+        </button>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1 class="app-title">UPSC Prep</h1>
+            </div>
+            <nav class="paper-nav" id="paper-nav">
+                <!-- Papers rendered by JS -->
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mode Indicator -->
+            <div class="mode-indicator">
+                <span class="mode-badge browse-mode">Browse Mode</span>
+            </div>
+
+            <!-- Breadcrumb -->
+            <nav class="breadcrumb" id="breadcrumb">
+                <!-- Breadcrumb rendered by JS -->
+            </nav>
+
+            <!-- Content Area -->
+            <div class="content-area" id="content-area">
+                <!-- Dynamic content rendered by JS -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Container -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Add Item</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="modal-input" id="modal-input" placeholder="Enter name..." autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="modal-confirm">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/invariants.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/file-system.js"></script>
+    <script src="js/vendor/plyr.js"></script>
+    <script src="js/vendor/pdf.min.js"></script>
+    <script src="js/components/sidebar.js"></script>
+    <script src="js/components/breadcrumb.js"></script>
+    <script src="js/components/modal.js"></script>
+    <script src="js/components/drop-zone.js"></script>
+    <script src="js/components/provider-list.js"></script>
+    <script src="js/components/course-list.js"></script>
+    <script src="js/components/lecture-list.js"></script>
+    <script src="js/components/study-mode.js"></script>
+    <script src="js/components/export.js"></script>
+    <script src="js/app.js"></script>
+</body>
+
+</html>
