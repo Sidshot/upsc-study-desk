@@ -22,14 +22,7 @@ const Export = {
         this.downloadFile(csv, 'upsc-progress.csv', 'text/csv');
     },
 
-    /**
-     * Export all notes as Markdown
-     */
-    async exportNotesMarkdown() {
-        const notes = await this.gatherAllNotes();
-        const markdown = this.convertNotesToMarkdown(notes);
-        this.downloadFile(markdown, 'upsc-notes.md', 'text/markdown');
-    },
+
 
     /**
      * Gather all data for export
@@ -87,40 +80,7 @@ const Export = {
         return result;
     },
 
-    /**
-     * Gather all notes
-     */
-    async gatherAllNotes() {
-        const allNotes = await DB.getAll('notes');
-        const result = [];
 
-        for (const note of allNotes) {
-            if (!note.content || note.content.trim() === '') continue;
-
-            const lecture = await AppState.getLecture(note.lectureId);
-            if (!lecture) continue;
-
-            const course = await AppState.getCourse(lecture.courseId);
-            if (!course) continue;
-
-            const provider = await AppState.getProvider(course.providerId);
-            if (!provider) continue;
-
-            const paper = AppState.getPaper(provider.paperId);
-            if (!paper) continue;
-
-            result.push({
-                paper: paper.name,
-                provider: provider.name,
-                course: course.name,
-                lecture: lecture.title,
-                content: note.content,
-                updatedAt: note.updatedAt
-            });
-        }
-
-        return result;
-    },
 
     /**
      * Convert data to CSV format
@@ -153,38 +113,7 @@ const Export = {
         ).join('\n');
     },
 
-    /**
-     * Convert notes to Markdown format
-     */
-    convertNotesToMarkdown(notes) {
-        let markdown = '# UPSC Study Desk - Notes\n\n';
-        markdown += `*Exported on ${new Date().toLocaleString()}*\n\n`;
-        markdown += '---\n\n';
 
-        // Group by paper/provider/course
-        const grouped = {};
-        for (const note of notes) {
-            const key = `${note.paper}/${note.provider}/${note.course}`;
-            if (!grouped[key]) {
-                grouped[key] = [];
-            }
-            grouped[key].push(note);
-        }
-
-        for (const [path, courseNotes] of Object.entries(grouped)) {
-            const [paper, provider, course] = path.split('/');
-            markdown += `## ${paper} > ${provider} > ${course}\n\n`;
-
-            for (const note of courseNotes) {
-                markdown += `### ${note.lecture}\n\n`;
-                markdown += note.content + '\n\n';
-                markdown += `*Last updated: ${new Date(note.updatedAt).toLocaleString()}*\n\n`;
-                markdown += '---\n\n';
-            }
-        }
-
-        return markdown;
-    },
 
     /**
      * Download a file
@@ -225,13 +154,7 @@ const Export = {
                         alert('Progress exported as CSV!');
                     }
                 }, '📄 Export Progress (CSV)'),
-                Utils.createElement('button', {
-                    className: 'btn btn-secondary',
-                    onClick: async () => {
-                        await this.exportNotesMarkdown();
-                        alert('Notes exported as Markdown!');
-                    }
-                }, '📝 Export Notes (Markdown)')
+
             ])
         ]);
 

@@ -429,45 +429,7 @@ const FileSystem = {
         return { created: false, updated: false, lecture };
     },
 
-    /**
-     * Write a note to markdown file
-     * Path: /notes/Paper/Provider/Course/Lecture.md
-     */
-    async writeNote(paperName, providerName, courseName, lectureTitle, content) {
-        if (!this.rootHandle) return false;
 
-        try {
-            // 1. Get/Create "notes" folder
-            const notesDir = await this.rootHandle.getDirectoryHandle('notes', { create: true });
-
-            // 2. Build path folders
-            let currentDir = notesDir;
-
-            // Sanitize and traverse
-            const pathParts = [paperName, providerName, courseName];
-            for (const part of pathParts) {
-                const safeName = this.sanitizeName(part);
-                currentDir = await currentDir.getDirectoryHandle(safeName, { create: true });
-            }
-
-            // 3. Write file
-            const filename = `${this.sanitizeName(lectureTitle)}.md`;
-            const fileHandle = await currentDir.getFileHandle(filename, { create: true });
-
-            // Create nice markdown content if file is empty or just raw text
-            const textToWrite = content; // We can enhance this later with metadata headers if needed
-
-            const writable = await fileHandle.createWritable();
-            await writable.write(textToWrite);
-            await writable.close();
-
-            console.log(`Note mirrored to disk: /notes/.../${filename}`);
-            return true;
-        } catch (err) {
-            console.error('Failed to mirror note to disk:', err);
-            return false;
-        }
-    },
 
     /**
      * Sanitize filename/foldername

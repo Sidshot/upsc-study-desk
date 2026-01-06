@@ -10,6 +10,29 @@ const Sidebar = {
     init() {
         this.render();
         this.setupToggle();
+        this.enforceVisibility();
+    },
+
+    /**
+     * Enforce sidebar visibility (prevent other components from hiding it)
+     */
+    enforceVisibility() {
+        const sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+
+        // Watch for class changes
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                    if (sidebar.classList.contains('hidden')) {
+                        console.log('[Sidebar] Removing enforced hidden state');
+                        sidebar.classList.remove('hidden');
+                    }
+                }
+            });
+        });
+
+        observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
     },
 
     /**
@@ -26,6 +49,7 @@ const Sidebar = {
 
     /**
      * Render the paper list
+     * Guaranteed to render GS pills in both Home and Study modes
      */
     render() {
         const container = Utils.$('paper-nav');
@@ -33,6 +57,7 @@ const Sidebar = {
 
         Utils.clearElement(container);
 
+        // Guaranteed to render GS pills in both Home and Study modes
         const papers = AppState.getPapers();
 
         papers.forEach(paper => {

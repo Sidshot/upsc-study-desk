@@ -13,8 +13,7 @@ const StudyMode = {
     // Actual file from disk (refreshed on each open)
     currentFile: null,
 
-    // Notes drawer state
-    notesOpen: false,
+
 
     // Session tracking to prevent race conditions
     activeSessionId: 0,
@@ -176,10 +175,7 @@ const StudyMode = {
                     className: `btn ${this.currentLecture.completed ? 'btn-success' : 'btn-secondary'}`,
                     onClick: async () => await this.toggleComplete()
                 }, this.currentLecture.completed ? '✓ Completed' : 'Mark Complete'),
-                Utils.createElement('button', {
-                    className: 'btn btn-secondary',
-                    onClick: () => this.toggleNotes()
-                }, '📝 Notes')
+
             ])
         ]);
         container.appendChild(header);
@@ -194,7 +190,7 @@ const StudyMode = {
         }
 
         container.appendChild(mainArea);
-        container.appendChild(this.createNotesDrawer());
+
     },
 
     /**
@@ -380,91 +376,7 @@ const StudyMode = {
         }
     },
 
-    /**
-     * Create notes drawer
-     */
-    createNotesDrawer() {
-        const drawer = Utils.createElement('div', {
-            className: `notes-drawer${this.notesOpen ? ' open' : ''}`,
-            id: 'notes-drawer'
-        });
 
-        const header = Utils.createElement('div', { className: 'notes-header' }, [
-            Utils.createElement('h3', {}, 'Notes'),
-            Utils.createElement('button', {
-                className: 'notes-close',
-                onClick: () => this.toggleNotes()
-            }, '×')
-        ]);
-        drawer.appendChild(header);
-
-        const textarea = Utils.createElement('textarea', {
-            className: 'notes-textarea',
-            id: 'notes-textarea',
-            placeholder: 'Take notes here... (auto-saved)'
-        });
-
-        this.loadNotes().then(content => {
-            textarea.value = content;
-        });
-
-        textarea.addEventListener('input', Utils.debounce(async () => {
-            await this.saveNotes(textarea.value);
-        }, 1000));
-
-        drawer.appendChild(textarea);
-        return drawer;
-    },
-
-    toggleNotes() {
-        this.notesOpen = !this.notesOpen;
-        const drawer = Utils.$('notes-drawer');
-        if (drawer) drawer.classList.toggle('open', this.notesOpen);
-    },
-
-    async loadNotes() {
-        if (!this.currentLecture) return '';
-        const notes = await DB.getByIndex('notes', 'lectureId', this.currentLecture.id);
-        return notes.length > 0 ? notes[0].content : '';
-    },
-
-    async saveNotes(content) {
-        if (!this.currentLecture) return;
-        const existing = await DB.getByIndex('notes', 'lectureId', this.currentLecture.id);
-        const now = new Date().toISOString();
-
-        if (existing.length > 0) {
-            existing[0].content = content;
-            existing[0].updatedAt = now;
-            await DB.put('notes', existing[0]);
-        } else {
-            await DB.put('notes', {
-                id: Utils.generateId(),
-                lectureId: this.currentLecture.id,
-                content: content,
-                updatedAt: now
-            });
-        }
-        this.mirrorNoteToDisk(content);
-    },
-
-    async mirrorNoteToDisk(content) {
-        if (!FileSystem.hasMasterFolder()) return;
-        try {
-            const course = await AppState.getCourse(this.currentLecture.courseId);
-            const provider = await AppState.getProvider(course.providerId);
-            const paper = AppState.getPaper(provider.paperId);
-
-            if (course && provider && paper) {
-                await FileSystem.writeNote(
-                    paper.name, provider.name, course.name,
-                    this.currentLecture.title, content
-                );
-            }
-        } catch (err) {
-            console.warn('Background note mirror failed:', err);
-        }
-    },
 
     /**
      * Save current position
