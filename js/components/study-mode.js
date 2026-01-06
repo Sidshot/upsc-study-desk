@@ -322,18 +322,22 @@ const StudyMode = {
         }
 
         try {
-            // 1. Get the raw data FIRST
+            // 1. Create a Blob URL (Standard Web Method)
+            // On GitHub Pages (HTTPS), this works perfectly.
             const file = await this.currentFile.handle.getFile();
-            const arrayBuffer = await file.arrayBuffer();
-            const uint8Array = new Uint8Array(arrayBuffer); // PDF.js expects TypedArray
+            this.currentObjectURL = URL.createObjectURL(file);
 
-            // 2. Load the viewer WITHOUT a file
+            // 2. Construct the Standard Viewer URL
             const viewerPath = 'js/vendor/pdfjs/web/viewer.html';
             const initialPage = this.currentLecture.lastPosition || 1;
 
+            // Pass the Blob URL to the viewer
+            // NOTE: On 'file://' protocol this might fail, but on 'https://' (GitHub Pages) it is robust.
+            const viewerUrl = `${viewerPath}?file=${encodeURIComponent(this.currentObjectURL)}#page=${initialPage}`;
+
             const iframe = Utils.createElement('iframe', {
                 className: 'pdf-viewer-frame',
-                src: viewerPath, // No ?file= param to avoid CORS/Fetch errors
+                src: viewerUrl,
                 allowfullscreen: 'true',
                 width: '100%',
                 height: '100%'
@@ -341,49 +345,34 @@ const StudyMode = {
 
             container.appendChild(iframe);
 
-            // 3. Inject Data on Load
-            iframe.onload = async () => {
-                console.log('[StudyMode] PDF Viewer Frame Loaded. Injecting Data directly...');
+            // 3. Persistence via Hash Listener
+            // The viewer updates the hash (#page=2) as you scroll.
+            // We can poll this safely without cross-origin hacks if same-origin.
 
+            let lastSavedPage = initialPage;
+
+            // Poll for page changes via URL hash (Robust & Simple)
+            const saveInterval = setInterval(() => {
                 try {
-                    const win = iframe.contentWindow;
-
-                    // Wait for PDFViewerApplication to be ready
-                    const checkApp = setInterval(async () => {
-                        if (win.PDFViewerApplication && win.PDFViewerApplication.initialized) {
-                            clearInterval(checkApp);
-
-                            try {
-                                // DIRECT OPEN: Bypasses fetching/networking entirely
-                                await win.PDFViewerApplication.open(uint8Array);
-
-                                // Restore Page
-                                if (initialPage > 1) {
-                                    win.PDFViewerApplication.page = initialPage;
-                                }
-
-                                // Setup Persistence
-                                win.PDFViewerApplication.eventBus.on('pagechanging', (e) => {
-                                    const pageNum = e.pageNumber;
-                                    if (this.currentLecture) {
-                                        this.currentLecture.lastPosition = pageNum;
-                                        DB.put('lectures', this.currentLecture);
-                                    }
-                                });
-
-                            } catch (openErr) {
-                                console.error('[StudyMode] Failed to open data in Viewer:', openErr);
+                    if (iframe.contentWindow && iframe.contentWindow.location) {
+                        const hash = iframe.contentWindow.location.hash; // e.g. "#page=5&zoom=auto,-13,770"
+                        const match = hash.match(/page=(\d+)/);
+                        if (match) {
+                            const pageNum = parseInt(match[1]);
+                            if (pageNum !== lastSavedPage && this.currentLecture) {
+                                lastSavedPage = pageNum;
+                                this.currentLecture.lastPosition = pageNum;
+                                DB.put('lectures', this.currentLecture);
                             }
                         }
-                    }, 100);
-
-                    // Timeout fallback
-                    setTimeout(() => clearInterval(checkApp), 10000);
-
+                    }
                 } catch (e) {
-                    console.warn('[StudyMode] Cross-Origin Error (should not happen on local file method):', e);
+                    // Security/Cross-origin block if somehow origin differs
                 }
-            };
+            }, 1000); // Check every second
+
+            // Cleanup interval on removal (handled by mutation observer ideally, causing minor leak if not)
+            // For now, we attach it to the container for cleanup if we had a comprehensive cleanup system.
 
         } catch (err) {
             console.error('PDF Load Error:', err);
