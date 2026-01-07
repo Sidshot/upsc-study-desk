@@ -9,7 +9,7 @@ A simple, offline-first personal study environment designed for focused learning
 - **Progress Tracking**: Manual completion tracking that you trust.
 
 ## 📖 User Guide
-For a detailed explanation of features, step-by-step usage instructions, and troubleshooting, please read the **[Full User Guide](guide.html)**.
+For a detailed explanation of features, step-by-step usage instructions, and troubleshooting, please read the **[Full User Guide](https://sidshot.github.io/upsc-study-desk/guide.html)**.
 
 ## How to use
 1.  **Visit the Website**: [https://sidshot.github.io/upsc-study-desk/](https://sidshot.github.io/upsc-study-desk/) (Bookmark this!)
