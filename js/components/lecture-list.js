@@ -6,6 +6,8 @@
 const LectureList = {
     // Tab state
     activeTab: 'video', // 'video' or 'pdf'
+    // Sort state
+    sortOrder: 'asc', // 'asc' or 'desc'
 
     /**
      * Set active tab and rerender
@@ -13,6 +15,24 @@ const LectureList = {
     setActiveTab(tab) {
         this.activeTab = tab;
         this.render();
+    },
+
+    /**
+     * Toggle sort order
+     */
+    toggleSort() {
+        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
+        this.render();
+    },
+
+    /**
+     * Sort items based on current order
+     */
+    sortItems(items) {
+        return items.sort((a, b) => {
+            const comparison = a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' });
+            return this.sortOrder === 'asc' ? comparison : -comparison;
+        });
     },
 
     /**
@@ -29,8 +49,12 @@ const LectureList = {
         Utils.clearElement(container);
 
         // Filter contents
-        const videos = lectures.filter(l => l.type === 'video');
-        const pdfs = lectures.filter(l => l.type === 'pdf');
+        let videos = lectures.filter(l => l.type === 'video');
+        let pdfs = lectures.filter(l => l.type === 'pdf');
+
+        // Apply sorting
+        videos = this.sortItems(videos);
+        pdfs = this.sortItems(pdfs);
 
         // Smart Default: If no videos but have PDFs, switch tab (only once/initially)
         // But we want to respect user selection if they switched manually.
@@ -46,6 +70,14 @@ const LectureList = {
                 `${course.name}`
             ),
             Utils.createElement('div', { className: 'content-actions' }, [
+                // Sort Button
+                Utils.createElement('button', {
+                    className: 'btn-icon',
+                    title: `Sort: ${this.sortOrder === 'asc' ? 'Ascending' : 'Descending'}`,
+                    style: 'margin-right: 1rem; font-size: 0.9rem; cursor: pointer; background: none; border: none; color: inherit;',
+                    onClick: () => this.toggleSort()
+                }, this.sortOrder === 'asc' ? '⬇️ Sort Asc' : '⬆️ Sort Desc'),
+
                 Utils.createElement('span', { className: 'lecture-count' },
                     `${progress.completed}/${progress.total} completed (${progress.percent}%)`
                 )
