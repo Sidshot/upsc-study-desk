@@ -21,52 +21,99 @@ const KeyboardShortcuts = {
         }
 
         // Only active in study mode
-        if (AppState.mode !== 'study' || !StudyMode.player) {
+        if (AppState.mode !== 'study') {
             return;
         }
 
+        // Get player OR native video element
         const player = StudyMode.player;
+        const video = document.querySelector('.plyr video, .study-video, video');
+
+        if (!player && !video) {
+            return;
+        }
 
         switch (e.code) {
             case 'Space':
                 e.preventDefault();
-                player.togglePlay();
-                this.showToast(player.playing ? '▶️ Playing' : '⏸️ Paused');
+                if (player) {
+                    player.togglePlay();
+                    this.showToast(player.playing ? '▶️ Playing' : '⏸️ Paused');
+                } else if (video) {
+                    if (video.paused) {
+                        video.play();
+                        this.showToast('▶️ Playing');
+                    } else {
+                        video.pause();
+                        this.showToast('⏸️ Paused');
+                    }
+                }
                 break;
 
             case 'ArrowLeft':
                 e.preventDefault();
-                player.rewind(10);
+                if (player) {
+                    player.rewind(10);
+                } else if (video) {
+                    video.currentTime = Math.max(0, video.currentTime - 10);
+                }
                 this.showToast('⏪ -10s');
                 break;
 
             case 'ArrowRight':
                 e.preventDefault();
-                player.forward(10);
+                if (player) {
+                    player.forward(10);
+                } else if (video) {
+                    video.currentTime = Math.min(video.duration, video.currentTime + 10);
+                }
                 this.showToast('⏩ +10s');
                 break;
 
             case 'ArrowUp':
                 e.preventDefault();
-                player.increaseVolume(0.1);
-                this.showToast(`🔊 Volume: ${Math.round(player.volume * 100)}%`);
+                if (player) {
+                    player.increaseVolume(0.1);
+                    this.showToast(`🔊 Volume: ${Math.round(player.volume * 100)}%`);
+                } else if (video) {
+                    video.volume = Math.min(1, video.volume + 0.1);
+                    this.showToast(`🔊 Volume: ${Math.round(video.volume * 100)}%`);
+                }
                 break;
 
             case 'ArrowDown':
                 e.preventDefault();
-                player.decreaseVolume(0.1);
-                this.showToast(`🔉 Volume: ${Math.round(player.volume * 100)}%`);
+                if (player) {
+                    player.decreaseVolume(0.1);
+                    this.showToast(`🔉 Volume: ${Math.round(player.volume * 100)}%`);
+                } else if (video) {
+                    video.volume = Math.max(0, video.volume - 0.1);
+                    this.showToast(`🔉 Volume: ${Math.round(video.volume * 100)}%`);
+                }
                 break;
 
             case 'KeyM':
                 e.preventDefault();
-                player.muted = !player.muted;
-                this.showToast(player.muted ? '🔇 Muted' : '🔊 Unmuted');
+                if (player) {
+                    player.muted = !player.muted;
+                    this.showToast(player.muted ? '🔇 Muted' : '🔊 Unmuted');
+                } else if (video) {
+                    video.muted = !video.muted;
+                    this.showToast(video.muted ? '🔇 Muted' : '🔊 Unmuted');
+                }
                 break;
 
             case 'KeyF':
                 e.preventDefault();
-                player.fullscreen.toggle();
+                if (player && player.fullscreen) {
+                    player.fullscreen.toggle();
+                } else if (video) {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        video.requestFullscreen();
+                    }
+                }
                 break;
 
             case 'KeyP':
@@ -99,7 +146,11 @@ const KeyboardShortcuts = {
                 if (!e.ctrlKey && !e.altKey) {
                     e.preventDefault();
                     const speed = e.code === 'Digit1' ? 1 : 2;
-                    player.speed = speed;
+                    if (player) {
+                        player.speed = speed;
+                    } else if (video) {
+                        video.playbackRate = speed;
+                    }
                     this.showToast(`⚡ Speed: ${speed}x`);
                 }
                 break;
