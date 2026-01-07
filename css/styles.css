@@ -2057,3 +2057,52 @@ body.sidebar-closed .sidebar-toggle:hover {
 .pdf-page-placeholder canvas {
     display: block;
 }
+
+/* Toolbar Actions */
+.toolbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.help-link {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(10, 132, 255, 0.1);
+    border-radius: 20px;
+    transition: all var(--transition-fast);
+}
+
+.help-link:hover {
+    background: rgba(10, 132, 255, 0.2);
+    transform: translateY(-1px);
+}
+
+/* App Footer */
+.app-footer {
+    text-align: center;
+    padding: 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: auto;
+}
+
+.contact-link {
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-size: var(--font-size-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: color var(--transition-fast);
+}
+
+.contact-link:hover {
+    color: var(--accent-primary);
+    text-decoration: underline;
+}
