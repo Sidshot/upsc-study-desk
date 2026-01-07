@@ -348,7 +348,7 @@ const StudyMode = {
             let lastSavedPage = initialPage;
 
             // Poll for page changes via URL hash (Robust & Simple)
-            const saveInterval = setInterval(() => {
+            this.pdfPollInterval = setInterval(() => {
                 try {
                     if (iframe.contentWindow && iframe.contentWindow.location) {
                         const hash = iframe.contentWindow.location.hash; // e.g. "#page=5&zoom=auto,-13,770"
@@ -454,6 +454,12 @@ const StudyMode = {
         // 4. Reset State
         this.currentLecture = null;
         this.currentFile = null;
+
+        // 5. Clear Intervals
+        if (this.pdfPollInterval) {
+            clearInterval(this.pdfPollInterval);
+            this.pdfPollInterval = null;
+        }
     },
 
     async goToNextLecture() {

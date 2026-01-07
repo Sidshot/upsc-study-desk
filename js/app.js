@@ -22,8 +22,13 @@ const App = {
                 // Auto-sync if master folder is configured
                 // This keeps DB in sync with file system (source of truth)
                 if (restored && FileSystem.hasMasterFolder()) {
-                    console.log('Auto-syncing with master folder...');
-                    await FileSystem.syncToDatabase();
+                    console.log('Starting background sync...');
+                    // Optimized: Backup sync
+                    FileSystem.syncToDatabase().then(result => {
+                        console.log('Background sync complete');
+                        // Refresh to show any new/deleted files
+                        App.render();
+                    });
                 }
             }
 
@@ -193,22 +198,21 @@ const App = {
      * Render home screen
      */
     async renderHome() {
-        const container = Utils.$('content-area');
-        if (!container) return;
-
-        Utils.clearElement(container);
+        // Prepare UI in a fragment to prevent race conditions/duplication
+        const fragment = document.createDocumentFragment();
 
         // Setup banner
-        this.renderSetupBanner(container);
+        // Note: renderSetupBanner appends to container. We pass fragment.
+        this.renderSetupBanner(fragment);
 
         // Recently Played section
-        const hasRecent = await this.renderRecentlyPlayed(container);
+        const hasRecent = await this.renderRecentlyPlayed(fragment);
 
         if (hasRecent) {
             const separator = Utils.createElement('hr', {
                 className: 'section-separator'
             });
-            container.appendChild(separator);
+            fragment.appendChild(separator);
         }
 
         // Paper cards
@@ -242,7 +246,7 @@ const App = {
             stats.appendChild(card);
         }
 
-        container.appendChild(stats);
+        fragment.appendChild(stats);
 
         // Export section
         const exportSection = Utils.createElement('div', {
@@ -250,7 +254,14 @@ const App = {
             style: 'margin-top: 2rem;'
         });
         Export.renderExportPanel(exportSection);
-        container.appendChild(exportSection);
+        fragment.appendChild(exportSection);
+
+        // Atomic Update
+        const container = Utils.$('content-area');
+        if (!container) return;
+
+        Utils.clearElement(container);
+        container.appendChild(fragment);
     },
 
     /**

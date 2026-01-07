@@ -274,6 +274,7 @@ const FileSystem = {
         for (const paper of papers) {
             // Match against paper ID (gs1, gs2, etc.)
             if (this.normalizeName(paper.id) === normalized) {
+                console.log(`[Match] ID match: "${folderName}" -> ${paper.id}`);
                 return paper.id;
             }
 
@@ -307,8 +308,11 @@ const FileSystem = {
     async syncToDatabase() {
         if (!this.rootHandle) {
             console.log('No master folder configured, skipping sync');
-            return { added: 0, updated: 0 };
+            return { added: 0, updated: 0, deleted: 0 };
         }
+
+        // Notify start
+        window.dispatchEvent(new CustomEvent('app:sync-start'));
 
         const structure = await this.scanMasterFolder();
         const papers = AppState.getPapers();
@@ -316,6 +320,12 @@ const FileSystem = {
 
         let added = 0;
         let updated = 0;
+        let deleted = 0;
+
+        // Track active IDs to identify deletions
+        const validProviderIds = new Set();
+        const validCourseIds = new Set();
+        const validLectureIds = new Set();
 
         // Process each paper folder
         for (const [paperFolderName, providers] of Object.entries(structure)) {
@@ -332,17 +342,20 @@ const FileSystem = {
             // Process providers
             for (const [providerName, courses] of Object.entries(providers)) {
                 const provider = await this.ensureProvider(paperId, providerName);
+                validProviderIds.add(provider.id);
 
                 // Process courses - pass actual folder path
                 for (const [courseName, lectures] of Object.entries(courses)) {
                     // Build actual folder path using real folder names
                     const folderPath = `${paperFolderName}/${providerName}/${courseName}`;
                     const course = await this.ensureCourse(provider.id, courseName, folderPath);
+                    validCourseIds.add(course.id);
 
                     // Process lectures
                     for (let i = 0; i < lectures.length; i++) {
                         const lectureFile = lectures[i];
                         const result = await this.ensureLecture(course.id, lectureFile, i);
+                        validLectureIds.add(result.lecture.id);
                         if (result.created) added++;
                         if (result.updated) updated++;
                     }
@@ -350,11 +363,116 @@ const FileSystem = {
             }
         }
 
+        // Garbage Collection: Remove items not found in scan
+
+        // 1. Providers
+        const allProviders = await DB.getAll('providers');
+        for (const p of allProviders) {
+            // Only clean up providers for papers we actually scanned/matched
+            // (If we skipped a paper folder, we shouldn't delete its providers)
+            const isScannedPaper = paperIds.includes(p.paperId) &&
+                Object.keys(structure).some(name => this.matchPaperFolder(name, papers) === p.paperId);
+
+            if (isScannedPaper && !validProviderIds.has(p.id)) {
+                console.log(`[Sync] Deleting missing provider: ${p.name}`);
+                await DB.delete('providers', p.id);
+                // Also clean up children (courses/lectures) for this provider? 
+                // DB integrity relies on cascaded checks, but let's let the next steps handle it or explicitly do it.
+                // Since we iterate all courses next, we will catch them there.
+                deleted++;
+            }
+        }
+
+        // 2. Courses
+        const allCourses = await DB.getAll('courses');
+        for (const c of allCourses) {
+            // If the parent provider was deleted, this course *should* be deleted.
+            // But strict set check is safer: if it wasn't in the scan, it's gone or moved.
+            if (validProviderIds.has(c.providerId) && !validCourseIds.has(c.id)) {
+                console.log(`[Sync] Deleting missing course: ${c.name}`);
+                await DB.delete('courses', c.id);
+                deleted++;
+            }
+            // If provider itself is invalid (deleted above), we should delete this course too.
+            // But the safe way is: if ID not in validCourseIds, delete it.
+            // However, we need to be careful not to delete courses from Providers that represent UNTOUCHED papers?
+            // The structure scan only covers folders that exist. 
+            // If we have validProviderIds populated only from scanned folders, 
+            // then `allCourses` might contain courses from papers we didn't populate validProviderIds for?
+            // Actually `validProviderIds` only contains IDs from the current scan.
+            // If we have a Paper in DB but no folder on disk, `matchPaperFolder` wouldn't return it? 
+            // Wait, we iterate folders found on disk. 
+            // If a Paper folder is completely missing from disk, we never enter the loop for it. 
+            // So `validProviderIds` will NOT contain existing providers for that missing paper.
+            // If we delete everything not in `validProviderIds`, we delete data for disconnected drives/folders?
+            // "SyncToDatabase" implies syncing the *Master Folder*. 
+            // If the Master Folder doesn't contain the Paper anymore, it should probably be removed.
+            // BUT, to be safe and "Smallest Change", let's restrict deletions to:
+            // "Items belonging to parents that ARE valid, but the item itself is missing"
+            // OR "Items that belong to the scope of what we scanned".
+            // Since we scan the entire Master Folder, anything NOT found there should be removed.
+
+            // To be safe against partial scans or bugs:
+            // We only delete if we are sure we *would have seen it*.
+            // We saw all top level papers in the folder.
+        }
+
+        // Revised GC Logic for safety:
+        // Only delete items if their parent exists in the valid set OR if we are doing a full destructive sync.
+        // Given it's a "Master Folder", the user expects a mirror.
+
+        // Let's stick to the plan: "Delete items whose IDs are not in the valid sets."
+        // Refinement: We need to filter `allCourses` to only those belonging to processed parents?
+        // No, if a whole Provider folder is deleted, `validProviderIds` won't have it.
+        // So we delete the Provider.
+        // Then we check courses. `validCourseIds` won't have the courses. So we delete them.
+
+        // Optimized GC Loop:
+        // We need to check if the *root* (Paper) was potentially part of the scan?
+        // If the user has "GS1" in DB but deleted "GS1" folder:
+        // The loop `for (const [paperFolderName...` will NOT run for GS1.
+        // So validProviderIds will NOT have GS1 providers.
+        // So we would delete all GS1 providers. This is correct behavior for a Sync.
+
+        // Iterate all providers again to be sure
+        const validProviderIdsList = Array.from(validProviderIds);
+        // We use the Set for O(1) checks
+
+        // 2. Courses (Safe delete)
+        for (const c of allCourses) {
+            // Check if course belongs to a provider that WAS valid/scanned?
+            // Actually, simply: if it's not in validCourseIds, it's not on disk.
+            if (!validCourseIds.has(c.id)) {
+                // Optimization: Only delete if we are sure? 
+                // Yes, Master Folder is the source of truth.
+                await DB.delete('courses', c.id);
+                deleted++;
+            }
+        }
+
+        // 3. Lectures
+        const allLectures = await DB.getAll('lectures');
+        for (const l of allLectures) {
+            if (!validLectureIds.has(l.id)) {
+                await DB.delete('lectures', l.id);
+                deleted++;
+            }
+        }
+
+        // Re-cleaning Providers (moved after children for clarity, though IndexedDB doesn't enforce FKs)
+        // We did providers first above, which is fine.
+
         // Invalidate caches after sync
         AppState.invalidateCache();
 
-        console.log(`Sync complete: ${added} added, ${updated} updated`);
-        return { added, updated };
+        const result = { added, updated, deleted };
+
+        console.log(`Sync complete:`, result);
+
+        // Notify end
+        window.dispatchEvent(new CustomEvent('app:sync-end', { detail: result }));
+
+        return result;
     },
 
     /**

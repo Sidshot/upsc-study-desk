@@ -33,6 +33,32 @@ const Sidebar = {
         });
 
         observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+
+        // Listen for sync events
+        window.addEventListener('app:sync-start', () => this.setSyncing(true));
+        window.addEventListener('app:sync-end', () => this.setSyncing(false));
+    },
+
+    /**
+     * Set syncing state UI
+     */
+    setSyncing(isSyncing) {
+        const spinner = document.getElementById('sidebar-sync-spinner');
+        if (spinner) {
+            spinner.style.display = isSyncing ? 'inline-block' : 'none';
+            // Animation
+            if (isSyncing) {
+                spinner.animate([
+                    { transform: 'rotate(0deg)' },
+                    { transform: 'rotate(360deg)' }
+                ], {
+                    duration: 1000,
+                    iterations: Infinity
+                });
+            } else {
+                spinner.getAnimations().forEach(anim => anim.cancel());
+            }
+        }
     },
 
     /**
