@@ -141,19 +141,21 @@ const Export = {
             ),
             Utils.createElement('div', { className: 'export-buttons' }, [
                 Utils.createElement('button', {
-                    className: 'btn btn-primary',
+                    className: 'btn btn-minimal btn-sm',
                     onClick: async () => {
                         await this.exportProgressJSON();
                         alert('Progress exported as JSON!');
-                    }
-                }, '📊 Export Progress (JSON)'),
+                    },
+                    innerHTML: '<i class="ph ph-file-code"></i> JSON Export'
+                }),
                 Utils.createElement('button', {
-                    className: 'btn btn-secondary',
+                    className: 'btn btn-minimal btn-sm',
                     onClick: async () => {
                         await this.exportProgressCSV();
                         alert('Progress exported as CSV!');
-                    }
-                }, '📄 Export Progress (CSV)'),
+                    },
+                    innerHTML: '<i class="ph ph-file-csv"></i> CSV Export'
+                }),
 
             ])
         ]);

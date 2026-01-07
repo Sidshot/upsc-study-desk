@@ -10,6 +10,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap"
         rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <link rel="stylesheet" href="css/vendor/plyr.css">
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -18,22 +19,18 @@
     <div class="app-container">
         <!-- Sidebar Toggle -->
         <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle Menu">
-            ☰
+            <i class="ph ph-list"></i>
         </button>
 
         <!-- Full Screen Toggle -->
         <button id="fullscreen-toggle" class="btn-pill fixed-toggle-btn" aria-label="Toggle Full Screen">
-            ⛶ Full Screen
+            <i class="ph ph-corners-out"></i> Full Screen
         </button>
 
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
-                <h1 class="app-title">
-                    UPSC Prep
-                    <span id="sidebar-sync-spinner" style="display:none; margin-left:10px; font-size: 0.8em;"
-                        title="Syncing...">↻</span>
-                </h1>
+                <!-- Title moved to Toolbar -->
             </div>
             <nav class="paper-nav" id="paper-nav">
                 <!-- Papers rendered by JS -->
@@ -42,19 +39,24 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Mode Indicator -->
-            <div class="mode-indicator">
-                <span class="mode-badge browse-mode">Browse Mode</span>
-            </div>
+            <!-- Content Shell (Glass Background) -->
+            <div class="content-shell">
+                <!-- Toolbar Area (Steady) -->
+                <div class="toolbar-container">
+                    <nav class="breadcrumb" id="breadcrumb"></nav>
 
-            <!-- Breadcrumb -->
-            <nav class="breadcrumb" id="breadcrumb">
-                <!-- Breadcrumb rendered by JS -->
-            </nav>
+                    <!-- Centered Title -->
+                    <div class="toolbar-title">UPSC Prep</div>
 
-            <!-- Content Area -->
-            <div class="content-area" id="content-area">
-                <!-- Dynamic content rendered by JS -->
+                    <div class="mode-indicator">
+                        <span class="mode-badge browse-mode">Browse Mode</span>
+                    </div>
+                </div>
+
+                <!-- Dynamic Content Area -->
+                <div id="content-area" class="scrollable-body">
+                    <!-- JS renders here -->
+                </div>
             </div>
         </main>
     </div>

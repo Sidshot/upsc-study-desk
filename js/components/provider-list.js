@@ -52,7 +52,7 @@ const ProviderList = {
             className: 'card add-card',
             onClick: () => this.handleAddProvider()
         }, [
-            Utils.createElement('div', { className: 'add-card-icon' }, '+'),
+            Utils.createElement('div', { className: 'add-card-icon', innerHTML: '<i class="ph ph-plus"></i>' }),
             Utils.createElement('div', { className: 'add-card-text' }, 'Add Provider')
         ]);
         grid.appendChild(addCard);

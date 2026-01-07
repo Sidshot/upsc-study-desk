@@ -64,7 +64,7 @@ const CourseList = {
             className: 'card add-card',
             onClick: () => this.handleAddCourse()
         }, [
-            Utils.createElement('div', { className: 'add-card-icon' }, '+'),
+            Utils.createElement('div', { className: 'add-card-icon', innerHTML: '<i class="ph ph-plus"></i>' }),
             Utils.createElement('div', { className: 'add-card-text' }, 'Add Course')
         ]);
         grid.appendChild(addCard);

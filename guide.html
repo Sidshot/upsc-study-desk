@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Guide - UPSC Study Desk</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <style>
+        :root {
+            --bg-primary: #121214;
+            --bg-secondary: #1c1c1e;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --accent-blue: #0a84ff;
+            --accent-red: #ff453a;
+            --accent-green: #30d158;
+            --border-light: rgba(255, 255, 255, 0.1);
+            --radius-lg: 16px;
+        }
+
+        body {
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        /* Hero */
+        .hero {
+            text-align: center;
+            padding: 60px 0;
+            border-bottom: 1px solid var(--border-light);
+            margin-bottom: 40px;
+        }
+
+        .hero h1 {
+            font-size: 48px;
+            margin: 0 0 16px 0;
+            background: linear-gradient(135deg, #fff 0%, #a1a1aa 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: var(--text-secondary);
+            margin-bottom: 32px;
+        }
+
+        .cta-box {
+            background: rgba(10, 132, 255, 0.1);
+            border: 1px solid var(--accent-blue);
+            padding: 24px;
+            border-radius: var(--radius-lg);
+            display: inline-block;
+        }
+
+        .cta-link {
+            font-size: 24px;
+            color: var(--accent-blue);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        .cta-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Sections */
+        section {
+            margin-bottom: 80px;
+        }
+
+        h2 {
+            font-size: 32px;
+            margin-bottom: 32px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        /* Critical Warning Box */
+        .code-red {
+            background: rgba(255, 69, 58, 0.1);
+            border: 2px solid var(--accent-red);
+            padding: 32px;
+            border-radius: var(--radius-lg);
+            margin: 40px 0;
+        }
+
+        .code-red-title {
+            color: var(--accent-red);
+            font-size: 24px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            text-transform: uppercase;
+        }
+
+        .diagram-img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin: 24px 0;
+        }
+
+        /* Steps */
+        .step {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 48px;
+            align-items: flex-start;
+        }
+
+        .step-num {
+            background: var(--bg-secondary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+            flex-shrink: 0;
+            border: 1px solid var(--border-light);
+        }
+
+        .step-content h3 {
+            margin-top: 0;
+            font-size: 22px;
+        }
+
+        .screenshot {
+            max-width: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            margin-top: 16px;
+        }
+
+        /* Back Button */
+        .back-fab {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: var(--accent-blue);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .step {
+                flex-direction: column;
+                gap: 16px;
+            }
+
+            .diagram-img {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <a href="index.html" class="back-fab">
+        <i class="ph ph-arrow-left"></i> Open App
+    </a>
+
+    <div class="container">
+
+        <!-- Hero Section -->
+        <div class="hero">
+            <h1>UPSC Study Desk</h1>
+            <p>The Ultimate Offline Learning Environment</p>
+
+            <div class="cta-box">
+                <div
+                    style="margin-bottom: 8px; color: var(--text-secondary); text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">
+                    Official Website</div>
+                <a href="https://sidshot.github.io/upsc-study-desk/" class="cta-link" target="_blank">
+                    sidshot.github.io/upsc-study-desk
+                </a>
+                <div style="margin-top: 8px; font-size: 13px;">⭐ Bookmark this link now!</div>
+            </div>
+        </div>
+
+        <!-- CODE RED SECTION -->
+        <section id="critical-setup">
+            <div class="code-red">
+                <div class="code-red-title">
+                    <i class="ph ph-warning-octagon-fill"></i> CODE RED: Critical Setup Required
+                </div>
+                <p><strong>STOP AND READ THIS.</strong> The website will <span
+                        style="color: var(--accent-red); font-weight: bold; text-decoration: underline;">BREAK</span> if
+                    you do not organize your folders exactly as shown below.</p>
+                <p>The app relies on a strict hierarchy to understand your study material. It expects data to be
+                    structured 4 levels deep.</p>
+
+                <img src="assets/guide_images/folder_structure.png" alt="Correct Folder Structure Diagram"
+                    class="diagram-img">
+
+                <div style="background: rgba(0,0,0,0.3); padding: 16px; border-radius: 8px;">
+                    <strong>Hierarchy Rule:</strong><br>
+                    <code>1. Master Folder</code> ➔ <code>2. Paper (GS1/GS2)</code> ➔
+                    <code>3. Provider (Vision/Forum)</code> ➔ <code>4. Course (History/Polity)</code> ➔
+                    <code>5. Actual Files</code>
+                </div>
+            </div>
+        </section>
+
+        <!-- Setup Guide -->
+        <section id="getting-started">
+            <h2><i class="ph ph-rocket-launch"></i> How to Connect Your Files</h2>
+
+            <div class="step">
+                <div class="step-num">1</div>
+                <div class="step-content">
+                    <h3>Open the Website</h3>
+                    <p>Go to the official link you bookmarked. You will see a clean landing page.</p>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">2</div>
+                <div class="step-content">
+                    <h3>Select Master Folder</h3>
+                    <p>Click the large blue button in the center. Do not select a sub-folder. Select the
+                        <strong>ROOT</strong> folder containing all your GS folders.
+                    </p>
+                    <img src="assets/guide_images/select_folder.png" alt="Select Folder Button" class="screenshot"
+                        style="max-width: 400px;">
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">3</div>
+                <div class="step-content">
+                    <h3>Allow Browser Access</h3>
+                    <p>Your browser (Chrome/Edge) handles security strictly. It will ask if you want to let this site
+                        view your files.</p>
+                    <p><strong>You MUST click "View files"</strong>. The site is offline-only; nothing is uploaded to
+                        the internet. It just reads the files on your disk to display them.</p>
+                    <img src="assets/guide_images/browser_permission.png" alt="Permission Prompt" class="screenshot"
+                        style="max-width: 400px;">
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">4</div>
+                <div class="step-content">
+                    <h3>That's It!</h3>
+                    <p>If your folder structure is correct (see Code Red section), the sidebar will instantly fill up
+                        with your Papers and Courses.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Browsers -->
+        <section>
+            <h2><i class="ph ph-globe"></i> Browser Support</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
+                <div
+                    style="background: rgba(48, 209, 88, 0.1); padding: 20px; border-radius: 12px; border: 1px solid var(--accent-green);">
+                    <h3 style="color: var(--accent-green); margin: 0 0 8px 0;">✅ Recommended</h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li>Google Chrome</li>
+                        <li>Microsoft Edge</li>
+                    </ul>
+                </div>
+                <div
+                    style="background: rgba(255, 69, 58, 0.1); padding: 20px; border-radius: 12px; border: 1px solid var(--accent-red);">
+                    <h3 style="color: var(--accent-red); margin: 0 0 8px 0;">❌ Not Supported</h3>
+                    <ul style="margin: 0; padding-left: 20px;">
+                        <li>Safari (No file access)</li>
+                        <li>Firefox (Partial/Buggy)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <footer style="text-align: center; color: var(--text-secondary); margin-top: 80px;">
+            <p>Made for Aspirants. Keep Studying.</p>
+        </footer>
+
+    </div>
+</body>
+
+</html>

@@ -8,12 +8,18 @@ A simple, offline-first personal study environment designed for focused learning
 - **Notes Durability**: Notes are saved to your local folder as Markdown files (`.md`).
 - **Progress Tracking**: Manual completion tracking that you trust.
 
+## 📖 User Guide
+For a detailed explanation of features, step-by-step usage instructions, and troubleshooting, please read the **[Full User Guide](guide.html)**.
+
 ## How to use
-1.  Open the website (or `index.html`).
+1.  **Visit the Website**: [https://sidshot.github.io/upsc-study-desk/](https://sidshot.github.io/upsc-study-desk/) (Bookmark this!)
 2.  Click **"Select Master Folder"**.
 3.  Choose the folder where you keep your study materials (e.g., `D:\UPSC Material`).
-    -   *Structure*: `Paper` -> `Provider` -> `Course` -> `Files`
-    -   *Example*: `GS1` -> `Vision IAS` -> `History` -> `Lecture 1.mp4`
+    > **CRITICAL**: Your folder structure MUST match this hierarchy:
+    > `Paper` -> `Provider` -> `Course` -> `Files`
+    > *Example*: `GS1` -> `Vision IAS` -> `History` -> `Lecture 1.mp4`
+
+4.  Allow browser permissions when prompted.
 
 ## Hosting on GitHub (for yourself or friends)
 1.  Upload (push) these files to a GitHub repository.

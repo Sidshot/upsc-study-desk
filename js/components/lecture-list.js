@@ -74,9 +74,15 @@ const LectureList = {
                 Utils.createElement('button', {
                     className: 'btn-icon',
                     title: `Sort: ${this.sortOrder === 'asc' ? 'Ascending' : 'Descending'}`,
-                    style: 'margin-right: 1rem; font-size: 0.9rem; cursor: pointer; background: none; border: none; color: inherit;',
+                    style: 'margin-right: 1rem; font-size: 1.2rem; cursor: pointer; background: none; border: none; color: inherit; display: flex; align-items: center;',
                     onClick: () => this.toggleSort()
-                }, this.sortOrder === 'asc' ? '⬇️ Sort Asc' : '⬆️ Sort Desc'),
+                }, [
+                    Utils.createElement('span', {
+                        innerHTML: this.sortOrder === 'asc'
+                            ? '<i class="ph ph-sort-ascending"></i> Sort Asc'
+                            : '<i class="ph ph-sort-descending"></i> Sort Desc'
+                    })
+                ]),
 
                 Utils.createElement('span', { className: 'lecture-count' },
                     `${progress.completed}/${progress.total} completed (${progress.percent}%)`

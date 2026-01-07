@@ -40,6 +40,8 @@ const Utils = {
                 });
             } else if (key.startsWith('on') && typeof value === 'function') {
                 el.addEventListener(key.slice(2).toLowerCase(), value);
+            } else if (key === 'innerHTML') {
+                el.innerHTML = value;
             } else {
                 el.setAttribute(key, value);
             }
