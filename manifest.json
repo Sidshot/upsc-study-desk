@@ -2,8 +2,8 @@
     "name": "UPSC Pro - Study Desk",
     "short_name": "UPSC Pro",
     "description": "The professional study desk for UPSC aspirants. Organize videos & PDFs with powerful tracking.",
-    "start_url": "/index.html",
-    "scope": "/",
+    "start_url": "./index.html",
+    "scope": "./",
     "display": "standalone",
     "background_color": "#1a1a2e",
     "theme_color": "#16213e",
@@ -38,7 +38,7 @@
             "name": "General Studies 1",
             "short_name": "GS1",
             "description": "History, Geography, Art & Culture",
-            "url": "/index.html?paper=gs1",
+            "url": "./index.html?paper=gs1",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
@@ -50,7 +50,7 @@
             "name": "General Studies 2",
             "short_name": "GS2",
             "description": "Polity, Governance, IR",
-            "url": "/index.html?paper=gs2",
+            "url": "./index.html?paper=gs2",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
@@ -62,7 +62,7 @@
             "name": "General Studies 3",
             "short_name": "GS3",
             "description": "Economy, Environment, S&T",
-            "url": "/index.html?paper=gs3",
+            "url": "./index.html?paper=gs3",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
@@ -74,7 +74,7 @@
             "name": "General Studies 4",
             "short_name": "GS4",
             "description": "Ethics, Integrity, Aptitude",
-            "url": "/index.html?paper=gs4",
+            "url": "./index.html?paper=gs4",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
@@ -86,7 +86,7 @@
             "name": "CSAT",
             "short_name": "CSAT",
             "description": "Prelims Paper 2",
-            "url": "/index.html?paper=csat",
+            "url": "./index.html?paper=csat",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
@@ -98,7 +98,7 @@
             "name": "Optional Subject",
             "short_name": "Optional",
             "description": "Your optional subject",
-            "url": "/index.html?paper=optional",
+            "url": "./index.html?paper=optional",
             "icons": [
                 {
                     "src": "assets/icons/icon-512.png",
