@@ -2106,3 +2106,113 @@ body.sidebar-closed .sidebar-toggle:hover {
     color: var(--accent-primary);
     text-decoration: underline;
 }
+
+/* ============================================
+   PWA Install UI
+   ============================================ */
+
+/* Install Button */
+.pwa-install-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.pwa-install-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.pwa-install-btn.hidden {
+    display: none;
+}
+
+.pwa-install-btn i {
+    font-size: 18px;
+}
+
+/* Animate entrance */
+.pwa-install-animate {
+    animation: pwa-bounce 0.5s ease;
+}
+
+@keyframes pwa-bounce {
+    0% { transform: scale(0.8); opacity: 0; }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* Success Toast */
+.pwa-toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: rgba(30, 30, 35, 0.95);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.pwa-toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.pwa-toast-icon {
+    font-size: 32px;
+}
+
+.pwa-toast-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+}
+
+.pwa-toast-text {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* Update Available Banner */
+.pwa-update-banner {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(34, 197, 94, 0.3);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.pwa-update-banner:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(34, 197, 94, 0.4);
+}

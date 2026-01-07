@@ -1,0 +1,121 @@
+{
+    "name": "UPSC Pro - Study Desk",
+    "short_name": "UPSC Pro",
+    "description": "The professional study desk for UPSC aspirants. Organize videos & PDFs with powerful tracking.",
+    "start_url": "/index.html",
+    "scope": "/",
+    "display": "standalone",
+    "background_color": "#1a1a2e",
+    "theme_color": "#16213e",
+    "orientation": "any",
+    "lang": "en",
+    "categories": [
+        "education",
+        "productivity"
+    ],
+    "icons": [
+        {
+            "src": "assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/icons/icon-512.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "assets/icons/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "General Studies 1",
+            "short_name": "GS1",
+            "description": "History, Geography, Art & Culture",
+            "url": "/index.html?paper=gs1",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "General Studies 2",
+            "short_name": "GS2",
+            "description": "Polity, Governance, IR",
+            "url": "/index.html?paper=gs2",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "General Studies 3",
+            "short_name": "GS3",
+            "description": "Economy, Environment, S&T",
+            "url": "/index.html?paper=gs3",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "General Studies 4",
+            "short_name": "GS4",
+            "description": "Ethics, Integrity, Aptitude",
+            "url": "/index.html?paper=gs4",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "CSAT",
+            "short_name": "CSAT",
+            "description": "Prelims Paper 2",
+            "url": "/index.html?paper=csat",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Optional Subject",
+            "short_name": "Optional",
+            "description": "Your optional subject",
+            "url": "/index.html?paper=optional",
+            "icons": [
+                {
+                    "src": "assets/icons/icon-512.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ],
+    "screenshots": [
+        {
+            "src": "assets/screenshot-wide.png",
+            "sizes": "1280x720",
+            "type": "image/png",
+            "form_factor": "wide",
+            "label": "UPSC Pro Dashboard"
+        }
+    ],
+    "related_applications": [],
+    "prefer_related_applications": false
+}

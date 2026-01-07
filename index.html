@@ -4,7 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPSC Prep</title>
+    <title>UPSC Pro</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#16213e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -46,7 +54,7 @@
                     <nav class="breadcrumb" id="breadcrumb"></nav>
 
                     <!-- Centered Title -->
-                    <div class="toolbar-title">UPSC Prep</div>
+                    <div class="toolbar-title">UPSC Pro</div>
 
                     <div class="toolbar-actions">
                         <a href="https://sidshot.github.io/upsc-study-desk/guide.html" target="_blank"
@@ -107,7 +115,19 @@
     <script src="js/components/lecture-list.js"></script>
     <script src="js/components/study-mode.js?v=2"></script>
     <script src="js/components/export.js?v=2"></script>
+    <script src="js/pwa-install.js"></script>
     <script src="js/app.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
 </body>
 
 </html>
