@@ -1,7 +1,7 @@
-// UPSC Pro Service Worker - v2.0
+// UPSC Pro Service Worker - v3.0
 // Advanced caching with offline fallback
 
-const CACHE_NAME = 'upsc-pro-v2';
+const CACHE_NAME = 'upsc-pro-v3';
 const OFFLINE_URL = '/offline.html';
 
 // Core files to cache immediately
@@ -30,6 +30,8 @@ const PRECACHE_URLS = [
     '/js/components/lecture-list.js',
     '/js/components/study-mode.js',
     '/js/components/export.js',
+    '/js/keyboard-shortcuts.js',
+    '/js/pwa-install.js',
     '/assets/logo.png',
     '/assets/icons/icon-512.png'
 ];

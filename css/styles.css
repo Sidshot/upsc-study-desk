@@ -2148,9 +2148,19 @@ body.sidebar-closed .sidebar-toggle:hover {
 }
 
 @keyframes pwa-bounce {
-    0% { transform: scale(0.8); opacity: 0; }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); opacity: 1; }
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.05);
+    }
+
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 /* Success Toast */
@@ -2215,4 +2225,71 @@ body.sidebar-closed .sidebar-toggle:hover {
 .pwa-update-banner:hover {
     transform: translateY(-3px);
     box-shadow: 0 12px 40px rgba(34, 197, 94, 0.4);
+}
+
+/* ============================================
+   Keyboard Shortcut Toast
+   ============================================ */
+.shortcut-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 16px;
+    font-size: 24px;
+    font-weight: 600;
+    z-index: 100000;
+    opacity: 0;
+    transition: all 0.2s ease;
+    pointer-events: none;
+    text-align: center;
+    backdrop-filter: blur(10px);
+}
+
+.shortcut-toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+/* Shortcut help tooltip */
+.shortcuts-help {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: rgba(30, 30, 35, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+    max-width: 280px;
+}
+
+.shortcuts-help-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.shortcuts-help-list {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 8px 16px;
+}
+
+.shortcut-key {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+    color: var(--accent-primary);
 }
