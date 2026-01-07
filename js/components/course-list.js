@@ -76,12 +76,18 @@ const CourseList = {
      * Handle course card click
      */
     async handleCourseClick(courseId) {
-        AppState.navigateTo(
-            AppState.currentView.paper,
-            AppState.currentView.provider,
-            courseId
-        );
-        await App.render();
+        try {
+            console.log('Navigating to course:', courseId);
+            AppState.navigateTo(
+                AppState.currentView.paper,
+                AppState.currentView.provider,
+                courseId
+            );
+            await App.render();
+        } catch (error) {
+            console.error('Navigation error:', error);
+            alert('Failed to open course: ' + error.message);
+        }
     },
 
     /**

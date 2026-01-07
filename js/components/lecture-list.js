@@ -43,8 +43,26 @@ const LectureList = {
         if (!container) return;
 
         const courseId = AppState.currentView.course;
-        const course = await AppState.getCourse(courseId);
-        const lectures = await AppState.getLectures(courseId);
+        if (!courseId) {
+            console.error('LectureList: No course ID found in state');
+            return;
+        }
+
+        let course, lectures;
+        try {
+            course = await AppState.getCourse(courseId);
+            lectures = await AppState.getLectures(courseId);
+        } catch (dbError) {
+            console.error('LectureList: DB Error', dbError);
+            alert('Database error loading lectures: ' + dbError.message);
+            return;
+        }
+
+        if (!course) {
+            console.error('LectureList: Course not found for ID', courseId);
+            alert('Error: Course data not found. Please try refreshing.');
+            return;
+        }
 
         Utils.clearElement(container);
 
