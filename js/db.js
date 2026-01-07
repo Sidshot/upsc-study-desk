@@ -73,24 +73,28 @@ const DB = {
     async seed() {
         const papers = await this.getAll('papers');
 
-        if (papers.length === 0) {
-            console.log('Seeding initial papers...');
+        // FORCE MIGRATE: Update icons if they are emojis (check first one)
+        // If GS1 has emoji '📚', we need to re-seed/update all
+        const needsUpdate = papers.length > 0 && !papers[0].icon.startsWith('ph-');
+
+        if (papers.length === 0 || needsUpdate) {
+            console.log('Seeding/Updating papers...');
 
             const initialPapers = [
-                { id: 'gs1', name: 'GS1', fullName: 'General Studies 1', icon: '📚', orderIndex: 0 },
-                { id: 'gs2', name: 'GS2', fullName: 'General Studies 2', icon: '📖', orderIndex: 1 },
-                { id: 'gs3', name: 'GS3', fullName: 'General Studies 3', icon: '📕', orderIndex: 2 },
-                { id: 'gs4', name: 'GS4', fullName: 'General Studies 4 (Ethics)', icon: '📗', orderIndex: 3 },
-                { id: 'csat', name: 'CSAT', fullName: 'Civil Services Aptitude Test', icon: '📘', orderIndex: 4 },
-                { id: 'optional', name: 'Optional', fullName: 'Optional Subject', icon: '📙', orderIndex: 5 },
-                { id: 'extra', name: 'Extra', fullName: 'Additional Resources', icon: '📓', orderIndex: 6 }
+                { id: 'gs1', name: 'GS1', fullName: 'General Studies 1', icon: 'ph-duotone ph-books', orderIndex: 0 },
+                { id: 'gs2', name: 'GS2', fullName: 'General Studies 2', icon: 'ph-duotone ph-globe', orderIndex: 1 },
+                { id: 'gs3', name: 'GS3', fullName: 'General Studies 3', icon: 'ph-duotone ph-chart-line-up', orderIndex: 2 },
+                { id: 'gs4', name: 'GS4', fullName: 'General Studies 4 (Ethics)', icon: 'ph-duotone ph-scale-balanced', orderIndex: 3 },
+                { id: 'csat', name: 'CSAT', fullName: 'Civil Services Aptitude Test', icon: 'ph-duotone ph-calculator', orderIndex: 4 },
+                { id: 'optional', name: 'Optional', fullName: 'Optional Subject', icon: 'ph-duotone ph-graduation-cap', orderIndex: 5 },
+                { id: 'extra', name: 'Extra', fullName: 'Additional Resources', icon: 'ph-duotone ph-archive', orderIndex: 6 }
             ];
 
             for (const paper of initialPapers) {
                 await this.put('papers', paper);
             }
 
-            console.log('Papers seeded successfully');
+            console.log('Papers seeded/updated successfully');
         }
     },
 

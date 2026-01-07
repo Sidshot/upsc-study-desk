@@ -167,8 +167,12 @@ const StudyMode = {
         const header = Utils.createElement('div', { className: 'study-header' }, [
             Utils.createElement('button', {
                 className: 'btn btn-secondary study-back-btn',
+                className: 'btn btn-secondary study-back-btn',
                 onClick: async () => await this.exit()
-            }, '← Back'),
+            }, [
+                Utils.createElement('i', { className: 'ph-duotone ph-arrow-left' }),
+                Utils.createElement('span', {}, ' Back')
+            ]),
             Utils.createElement('h2', { className: 'study-title' }, this.currentLecture.title),
             Utils.createElement('div', { className: 'study-actions' }, [
                 Utils.createElement('button', {
@@ -404,7 +408,9 @@ const StudyMode = {
     showCompletionPrompt() {
         const container = Utils.$('content-area');
         const prompt = Utils.createElement('div', { className: 'completion-prompt' }, [
-            Utils.createElement('div', { className: 'completion-icon' }, '🎉'),
+            Utils.createElement('div', { className: 'completion-icon' }, [
+                Utils.createElement('i', { className: 'ph-duotone ph-confetti' })
+            ]),
             Utils.createElement('div', { className: 'completion-title' }, 'Lecture Completed!'),
             Utils.createElement('div', { className: 'completion-actions' }, [
                 Utils.createElement('button', {

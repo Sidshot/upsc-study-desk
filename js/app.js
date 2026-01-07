@@ -37,6 +37,9 @@ const App = {
             Modal.init();
             this.setupFullScreenToggle();
 
+            // Track daily visit for streaks
+            Analytics.recordVisit();
+
             // Initial render
             await this.render();
 
@@ -102,7 +105,7 @@ const App = {
         Utils.clearElement(container);
 
         const loading = Utils.createElement('div', { className: 'empty-state' }, [
-            Utils.createElement('div', { className: 'empty-state-icon' }, '⏳'),
+            Utils.createElement('i', { className: 'ph-duotone ph-hourglass empty-state-icon' }),
             Utils.createElement('div', { className: 'empty-state-title' }, 'Loading...'),
             Utils.createElement('div', { className: 'empty-state-text' }, 'Preparing your study desk')
         ]);
@@ -120,7 +123,7 @@ const App = {
         Utils.clearElement(container);
 
         const error = Utils.createElement('div', { className: 'empty-state' }, [
-            Utils.createElement('div', { className: 'empty-state-icon' }, '⚠️'),
+            Utils.createElement('i', { className: 'ph-duotone ph-warning empty-state-icon' }),
             Utils.createElement('div', { className: 'empty-state-title' }, 'Error'),
             Utils.createElement('div', { className: 'empty-state-text' }, message)
         ]);
@@ -196,9 +199,10 @@ const App = {
             // Show setup prompt
             const banner = Utils.createElement('div', { className: 'setup-banner' }, [
                 Utils.createElement('div', { className: 'setup-banner-content' }, [
-                    Utils.createElement('div', { className: 'setup-banner-title' },
-                        '📂 Set Up Your Study Folder'
-                    ),
+                    Utils.createElement('div', { className: 'setup-banner-title' }, [
+                        Utils.createElement('i', { className: 'ph-duotone ph-folder-open' }),
+                        Utils.createElement('span', {}, ' Set Up Your Study Folder')
+                    ]),
                     Utils.createElement('div', { className: 'setup-banner-text' },
                         'Select a master folder where all your study materials will be organized. ' +
                         'Structure: Paper → Provider → Course → Files'
@@ -230,6 +234,9 @@ const App = {
         // Note: renderSetupBanner appends to container. We pass fragment.
         this.renderSetupBanner(fragment);
 
+        // Analytics Dashboard (always visible on home)
+        await AnalyticsDashboard.render(fragment);
+
         // Recently Played section
         const hasRecent = await this.renderRecentlyPlayed(fragment);
 
@@ -258,7 +265,10 @@ const App = {
                 }
             }, [
                 Utils.createElement('div', { className: 'card-title' }, [
-                    Utils.createElement('span', {}, paper.icon + ' '),
+                    // Check if icon is class name (starts with ph-) or emoji
+                    paper.icon.startsWith('ph-')
+                        ? Utils.createElement('i', { className: paper.icon + ' card-icon' })
+                        : Utils.createElement('span', { className: 'card-icon' }, paper.icon),
                     Utils.createElement('span', {}, paper.name)
                 ]),
                 Utils.createElement('div', { className: 'card-subtitle' },
@@ -301,9 +311,10 @@ const App = {
 
         const section = Utils.createElement('div', { className: 'recent-section' });
 
-        const header = Utils.createElement('h3', { className: 'section-title' },
-            '🕐 Recently Played'
-        );
+        const header = Utils.createElement('h3', { className: 'section-title' }, [
+            Utils.createElement('i', { className: 'ph-duotone ph-clock-counter-clockwise' }),
+            Utils.createElement('span', {}, ' Recently Played')
+        ]);
         section.appendChild(header);
 
         const grid = Utils.createElement('div', { className: 'recent-grid' });
@@ -313,9 +324,11 @@ const App = {
                 className: 'recent-tile',
                 onClick: async () => await StudyMode.enter(lecture.id)
             }, [
-                Utils.createElement('div', { className: 'recent-tile-icon' },
-                    lecture.type === 'video' ? '🎬' : '📄'
-                ),
+                Utils.createElement('div', { className: 'recent-tile-icon' }, [
+                    Utils.createElement('i', {
+                        className: lecture.type === 'video' ? 'ph-duotone ph-video' : 'ph-duotone ph-file-text'
+                    })
+                ]),
                 Utils.createElement('div', { className: 'recent-tile-content' }, [
                     Utils.createElement('div', { className: 'recent-tile-title' }, lecture.title),
                     Utils.createElement('div', { className: 'recent-tile-meta' },

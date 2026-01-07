@@ -91,15 +91,15 @@ const Sidebar = {
             const lowerId = id.toLowerCase();
             const lowerName = name.toLowerCase();
 
-            if (lowerId.includes('gs') || lowerName.includes('general')) return '<i class="ph ph-globe-hemisphere-west"></i>'; // GS
-            if (lowerId.includes('essay')) return '<i class="ph ph-scroll"></i>'; // Essay
-            if (lowerId.includes('opt') || lowerName.includes('optional')) return '<i class="ph ph-flask"></i>'; // Optional (Science/flask generic)
-            if (lowerName.includes('ethics')) return '<i class="ph ph-scales"></i>';
-            if (lowerName.includes('history')) return '<i class="ph ph-hourglass"></i>';
-            if (lowerName.includes('geography')) return '<i class="ph ph-map-trifold"></i>';
-            if (lowerName.includes('polity')) return '<i class="ph ph-bank"></i>';
+            if (lowerId.includes('gs') || lowerName.includes('general')) return '<i class="ph-duotone ph-globe-hemisphere-west"></i>'; // GS
+            if (lowerId.includes('essay')) return '<i class="ph-duotone ph-scroll"></i>'; // Essay
+            if (lowerId.includes('opt') || lowerName.includes('optional')) return '<i class="ph-duotone ph-flask"></i>'; // Optional (Science/flask generic)
+            if (lowerName.includes('ethics')) return '<i class="ph-duotone ph-scales"></i>';
+            if (lowerName.includes('history')) return '<i class="ph-duotone ph-hourglass"></i>';
+            if (lowerName.includes('geography')) return '<i class="ph-duotone ph-map-trifold"></i>';
+            if (lowerName.includes('polity')) return '<i class="ph-duotone ph-bank"></i>';
 
-            return '<i class="ph ph-book-open"></i>'; // Default
+            return '<i class="ph-duotone ph-book-open"></i>'; // Default
         };
 
         papers.forEach(paper => {

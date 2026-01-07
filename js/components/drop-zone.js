@@ -14,7 +14,9 @@ const DropZone = {
             className: 'drop-zone',
             dataset: { courseId: courseId }
         }, [
-            Utils.createElement('div', { className: 'drop-zone-icon' }, '📂'),
+            Utils.createElement('div', { className: 'drop-zone-icon' }, [
+                Utils.createElement('i', { className: 'ph-duotone ph-folder-arrow-down' })
+            ]),
             Utils.createElement('div', { className: 'drop-zone-title' },
                 'Drop files here'
             ),

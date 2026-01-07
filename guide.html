@@ -8,7 +8,7 @@
     <link
         href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap"
         rel="stylesheet">
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link rel="stylesheet" type="text/css" href="assets/phosphor/duotone/style.css">
     <style>
         :root {
             --bg-primary: #121214;
@@ -184,7 +184,7 @@
 <body>
 
     <a href="index.html" class="back-fab">
-        <i class="ph ph-arrow-left"></i> Open App
+        <i class="ph-duotone ph-arrow-left"></i> Open App
     </a>
 
     <div class="container">
@@ -209,7 +209,7 @@
         <section id="critical-setup">
             <div class="code-red">
                 <div class="code-red-title">
-                    <i class="ph ph-warning-octagon-fill"></i> CODE RED: Critical Setup Required
+                    <i class="ph-duotone ph-warning-octagon"></i> CODE RED: Critical Setup Required
                 </div>
                 <p><strong>STOP AND READ THIS.</strong> The website will <span
                         style="color: var(--accent-red); font-weight: bold; text-decoration: underline;">BREAK</span> if
@@ -231,7 +231,7 @@
 
         <!-- Setup Guide -->
         <section id="getting-started">
-            <h2><i class="ph ph-rocket-launch"></i> How to Connect Your Files</h2>
+            <h2><i class="ph-duotone ph-rocket-launch"></i> How to Connect Your Files</h2>
 
             <div class="step">
                 <div class="step-num">1</div>
@@ -276,9 +276,91 @@
             </div>
         </section>
 
+        <!-- Features Section -->
+        <section id="features">
+            <h2><i class="ph-duotone ph-star"></i> Power User Features</h2>
+
+            <div class="step">
+                <div class="step-num">★</div>
+                <div class="step-content">
+                    <h3>Smart Analytics Dashboard</h3>
+                    <p>Track your progress like a pro. The dashboard updates automatically as you study.</p>
+                    <ul style="margin-top: 10px; color: var(--text-secondary); list-style-type: none; padding-left: 0;">
+                        <li style="margin-bottom: 8px;">🔥 <strong>Daily Streak:</strong> Consistency is key. Open the
+                            app every day to keep your streak alive.</li>
+                        <li style="margin-bottom: 8px;">📅 <strong>Activity Heatmap:</strong> A visual 30-day calendar
+                            showing exactly when you studied.</li>
+                        <li style="margin-bottom: 8px;">📊 <strong>Lecture Tracking:</strong> See how many total
+                            lectures you've completed across all courses.</li>
+                        <li style="margin-bottom: 8px;">🔒 <strong>Data Privacy:</strong> All stats are stored 100%
+                            locally on your device. Zero cloud uploads.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">★</div>
+                <div class="step-content">
+                    <h3>Immersive Study Mode</h3>
+                    <p>Click any lecture to enter a distraction-free environment.</p>
+                    <ul style="margin-top: 10px; color: var(--text-secondary); list-style-type: none; padding-left: 0;">
+                        <li style="margin-bottom: 8px;">⏯️ <strong>Resume Playback:</strong> The app remembers the exact
+                            second you left every video.</li>
+                        <li style="margin-bottom: 8px;">📑 <strong>PDF Progress:</strong> It even remembers which page
+                            you were on in PDF documents.</li>
+                        <li style="margin-bottom: 8px;">🕶️ <strong>Focus View:</strong> The sidebar hides automatically
+                            to give you full screen real estate.</li>
+                        <li style="margin-bottom: 8px;">✅ <strong>Mark Complete:</strong> Hit the checkmark to update
+                            your analytics and track completion.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-num">★</div>
+                <div class="step-content">
+                    <h3>Smart Organization</h3>
+                    <p>Your messy folders are automatically organized into a rigorous syllabus structure.</p>
+                    <ul style="margin-top: 10px; color: var(--text-secondary); list-style-type: none; padding-left: 0;">
+                        <li style="margin-bottom: 8px;">📂 <strong>Auto-Sorting:</strong> Files are grouped by Paper
+                            (GS1-4), Provider, and Course.</li>
+                        <li style="margin-bottom: 8px;">📥 <strong>Drag & Drop:</strong> Simply drag new video/PDF files
+                            onto any course to add them instantly.</li>
+                        <li style="margin-bottom: 8px;">📡 <strong>Offline First:</strong> Designed to work perfectly
+                            without an internet connection.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Troubleshooting Section -->
+        <section id="troubleshooting">
+            <h2><i class="ph-duotone ph-warning-circle"></i> Troubleshooting</h2>
+
+            <div class="code-red" style="border-color: var(--accent-blue); background: rgba(10, 132, 255, 0.1);">
+                <div class="code-red-title" style="color: var(--accent-blue);">
+                    <i class="ph-duotone ph-info"></i> How to Fix Glitches
+                </div>
+                <p>If the site looks broken, icons are missing, or styles look weird, you can force a refresh.</p>
+
+                <h3 style="margin-top: 20px;">Use: <span
+                        style="background: #333; padding: 4px 8px; border-radius: 4px;">Ctrl + Shift + R</span> or <span
+                        style="background: #333; padding: 4px 8px; border-radius: 4px;">Ctrl + F5</span></h3>
+
+                <div style="margin-top: 20px; border-top: 1px solid var(--border-light); padding-top: 20px;">
+                    <strong style="color: var(--accent-red); display: block; margin-bottom: 8px;">⚠️ IMPORTANT
+                        WARNING:</strong>
+                    <p>A hard refresh clears specific temporary data. <strong>You will need to re-select your Master
+                            Folder</strong> after refreshing.</p>
+                    <p>Don't worry—your <strong>Analytics (streaks, completions)</strong> are saved in a permanent
+                        database and <strong>will NOT be lost</strong>.</p>
+                </div>
+            </div>
+        </section>
+
         <!-- Browsers -->
         <section>
-            <h2><i class="ph ph-globe"></i> Browser Support</h2>
+            <h2><i class="ph-duotone ph-globe"></i> Browser Support</h2>
             <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px;">
                 <div
                     style="background: rgba(48, 209, 88, 0.1); padding: 20px; border-radius: 12px; border: 1px solid var(--accent-green);">

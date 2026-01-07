@@ -79,8 +79,8 @@ const LectureList = {
                 }, [
                     Utils.createElement('span', {
                         innerHTML: this.sortOrder === 'asc'
-                            ? '<i class="ph ph-sort-ascending"></i> Sort Asc'
-                            : '<i class="ph ph-sort-descending"></i> Sort Desc'
+                            ? '<i class="ph-duotone ph-sort-ascending"></i> Sort Asc'
+                            : '<i class="ph-duotone ph-sort-descending"></i> Sort Desc'
                     })
                 ]),
 
@@ -180,7 +180,7 @@ const LectureList = {
         const dragHandle = Utils.createElement('div', {
             className: 'lecture-drag-handle',
             title: 'Drag to reorder'
-        }, '⋮⋮');
+        }, [Utils.createElement('i', { className: 'ph-duotone ph-dots-six-vertical' })]);
         item.appendChild(dragHandle);
 
         // Status checkbox
@@ -195,9 +195,9 @@ const LectureList = {
         item.appendChild(status);
 
         // Type icon
-        const typeIcon = Utils.createElement('div', { className: 'lecture-type-icon' },
-            lecture.type === 'video' ? '🎬' : '📄'
-        );
+        const typeIcon = Utils.createElement('div', { className: 'lecture-type-icon' }, [
+            Utils.createElement('i', { className: lecture.type === 'video' ? 'ph-duotone ph-video' : 'ph-duotone ph-file-text' })
+        ]);
         item.appendChild(typeIcon);
 
         // Title (clickable area for opening)
@@ -217,213 +217,217 @@ const LectureList = {
                 e.stopPropagation();
                 this.showRenameModal(lecture);
             }
-        }, '✏️');
-        actions.appendChild(editBtn);
+                this.showRenameModal(lecture);
+        }
+        }, [Utils.createElement('i', { className: 'ph-duotone ph-pencil-simple' })]);
+actions.appendChild(editBtn);
 
-        // Delete button
-        const deleteBtn = Utils.createElement('button', {
-            className: 'lecture-action-btn delete',
-            title: 'Delete',
-            onClick: async (e) => {
-                e.stopPropagation();
+// Delete button
+const deleteBtn = Utils.createElement('button', {
+    className: 'lecture-action-btn delete',
+    title: 'Delete',
+    onClick: async (e) => {
+        e.stopPropagation();
+        await this.showDeleteGuidance(lecture, courseId);
+    }
                 await this.showDeleteGuidance(lecture, courseId);
-            }
-        }, '🗑️');
-        actions.appendChild(deleteBtn);
+}
+        }, [Utils.createElement('i', { className: 'ph-duotone ph-trash' })]);
+actions.appendChild(deleteBtn);
 
-        item.appendChild(actions);
+item.appendChild(actions);
 
-        // Type badge
-        const typeBadge = Utils.createElement('div', { className: 'lecture-type-badge' },
-            lecture.type.toUpperCase()
-        );
-        item.appendChild(typeBadge);
+// Type badge
+const typeBadge = Utils.createElement('div', { className: 'lecture-type-badge' },
+    lecture.type.toUpperCase()
+);
+item.appendChild(typeBadge);
 
-        // Setup drag events
-        this.setupDragEvents(item, lecture, courseId);
+// Setup drag events
+this.setupDragEvents(item, lecture, courseId);
 
-        // Click to open Study Mode
-        item.addEventListener('click', async (e) => {
-            // Don't open if clicking on action buttons
-            if (e.target.closest('.lecture-actions') ||
-                e.target.closest('.lecture-status') ||
-                e.target.closest('.lecture-drag-handle')) {
-                return;
-            }
-            await this.handleLectureClick(lecture.id);
-        });
+// Click to open Study Mode
+item.addEventListener('click', async (e) => {
+    // Don't open if clicking on action buttons
+    if (e.target.closest('.lecture-actions') ||
+        e.target.closest('.lecture-status') ||
+        e.target.closest('.lecture-drag-handle')) {
+        return;
+    }
+    await this.handleLectureClick(lecture.id);
+});
 
-        return item;
+return item;
     },
 
-    /**
-     * Setup drag and drop for reordering
-     */
-    setupDragEvents(item, lecture, courseId) {
-        item.addEventListener('dragstart', (e) => {
-            this.draggedItem = item;
-            this.draggedIndex = parseInt(item.dataset.index);
-            item.classList.add('dragging');
-            e.dataTransfer.effectAllowed = 'move';
-        });
+/**
+ * Setup drag and drop for reordering
+ */
+setupDragEvents(item, lecture, courseId) {
+    item.addEventListener('dragstart', (e) => {
+        this.draggedItem = item;
+        this.draggedIndex = parseInt(item.dataset.index);
+        item.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+    });
 
-        item.addEventListener('dragend', () => {
-            if (this.draggedItem) {
-                this.draggedItem.classList.remove('dragging');
+    item.addEventListener('dragend', () => {
+        if (this.draggedItem) {
+            this.draggedItem.classList.remove('dragging');
+        }
+        this.draggedItem = null;
+        this.draggedIndex = null;
+
+        // Remove all drag-over states
+        document.querySelectorAll('.lecture-item.drag-over').forEach(el => {
+            el.classList.remove('drag-over');
+        });
+    });
+
+    item.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        if (this.draggedItem && this.draggedItem !== item) {
+            item.classList.add('drag-over');
+        }
+    });
+
+    item.addEventListener('dragleave', () => {
+        item.classList.remove('drag-over');
+    });
+
+    item.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        item.classList.remove('drag-over');
+
+        if (this.draggedItem && this.draggedItem !== item) {
+            const fromIndex = this.draggedIndex;
+            const toIndex = parseInt(item.dataset.index);
+
+            if (fromIndex !== toIndex) {
+                await this.reorderLectures(courseId, fromIndex, toIndex);
             }
-            this.draggedItem = null;
-            this.draggedIndex = null;
-
-            // Remove all drag-over states
-            document.querySelectorAll('.lecture-item.drag-over').forEach(el => {
-                el.classList.remove('drag-over');
-            });
-        });
-
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            if (this.draggedItem && this.draggedItem !== item) {
-                item.classList.add('drag-over');
-            }
-        });
-
-        item.addEventListener('dragleave', () => {
-            item.classList.remove('drag-over');
-        });
-
-        item.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            item.classList.remove('drag-over');
-
-            if (this.draggedItem && this.draggedItem !== item) {
-                const fromIndex = this.draggedIndex;
-                const toIndex = parseInt(item.dataset.index);
-
-                if (fromIndex !== toIndex) {
-                    await this.reorderLectures(courseId, fromIndex, toIndex);
-                }
-            }
-        });
-    },
+        }
+    });
+},
 
     /**
      * Reorder lectures
      */
     async reorderLectures(courseId, fromIndex, toIndex) {
-        const lectures = await AppState.getLectures(courseId);
+    const lectures = await AppState.getLectures(courseId);
 
-        // Remove and reinsert
-        const [movedLecture] = lectures.splice(fromIndex, 1);
-        lectures.splice(toIndex, 0, movedLecture);
+    // Remove and reinsert
+    const [movedLecture] = lectures.splice(fromIndex, 1);
+    lectures.splice(toIndex, 0, movedLecture);
 
-        // Update order indices
-        for (let i = 0; i < lectures.length; i++) {
-            if (lectures[i].orderIndex !== i) {
-                lectures[i].orderIndex = i;
-                await DB.put('lectures', lectures[i]);
-            }
+    // Update order indices
+    for (let i = 0; i < lectures.length; i++) {
+        if (lectures[i].orderIndex !== i) {
+            lectures[i].orderIndex = i;
+            await DB.put('lectures', lectures[i]);
         }
+    }
 
-        // Invalidate cache and re-render
-        AppState.invalidateCache();
-        await this.render();
-    },
+    // Invalidate cache and re-render
+    AppState.invalidateCache();
+    await this.render();
+},
 
-    /**
-     * Start inline editing of lecture title
-     */
-    startInlineEdit(titleElement, lecture) {
-        const currentTitle = lecture.title;
+/**
+ * Start inline editing of lecture title
+ */
+startInlineEdit(titleElement, lecture) {
+    const currentTitle = lecture.title;
 
-        // Create input
-        const input = Utils.createElement('input', {
-            type: 'text',
-            className: 'lecture-title-input',
-            value: currentTitle
-        });
+    // Create input
+    const input = Utils.createElement('input', {
+        type: 'text',
+        className: 'lecture-title-input',
+        value: currentTitle
+    });
 
-        // Replace title with input
-        titleElement.textContent = '';
-        titleElement.appendChild(input);
-        input.focus();
-        input.select();
+    // Replace title with input
+    titleElement.textContent = '';
+    titleElement.appendChild(input);
+    input.focus();
+    input.select();
 
-        // Save on blur or Enter
-        const save = async () => {
-            const newTitle = input.value.trim();
-            if (newTitle && newTitle !== currentTitle) {
-                lecture.title = newTitle;
-                await DB.put('lectures', lecture);
-                AppState.invalidateCache();
-            }
-            titleElement.textContent = lecture.title;
-        };
+    // Save on blur or Enter
+    const save = async () => {
+        const newTitle = input.value.trim();
+        if (newTitle && newTitle !== currentTitle) {
+            lecture.title = newTitle;
+            await DB.put('lectures', lecture);
+            AppState.invalidateCache();
+        }
+        titleElement.textContent = lecture.title;
+    };
 
-        input.addEventListener('blur', save);
-        input.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                input.blur();
-            } else if (e.key === 'Escape') {
-                titleElement.textContent = currentTitle;
-            }
-        });
-    },
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            input.blur();
+        } else if (e.key === 'Escape') {
+            titleElement.textContent = currentTitle;
+        }
+    });
+},
 
     /**
      * Toggle lecture completion status
      */
     async toggleComplete(lecture) {
-        lecture.completed = !lecture.completed;
-        await DB.put('lectures', lecture);
-        AppState.invalidateCache();
-        await this.render();
-    },
+    lecture.completed = !lecture.completed;
+    await DB.put('lectures', lecture);
+    AppState.invalidateCache();
+    await this.render();
+},
 
     /**
      * Handle lecture click - Enter Study Mode
      */
     async handleLectureClick(lectureId) {
-        await StudyMode.enter(lectureId);
-    },
+    await StudyMode.enter(lectureId);
+},
 
-    /**
-     * Show rename modal for lecture
-     */
-    showRenameModal(lecture) {
-        Modal.open({
-            title: 'Rename Lecture',
-            placeholder: 'Enter new title...',
-            value: lecture.title,
-            onConfirm: async (newTitle) => {
-                if (newTitle && newTitle !== lecture.title) {
-                    lecture.title = newTitle;
-                    await DB.put('lectures', lecture);
-                    AppState.invalidateCache();
-                    await this.render();
-                }
+/**
+ * Show rename modal for lecture
+ */
+showRenameModal(lecture) {
+    Modal.open({
+        title: 'Rename Lecture',
+        placeholder: 'Enter new title...',
+        value: lecture.title,
+        onConfirm: async (newTitle) => {
+            if (newTitle && newTitle !== lecture.title) {
+                lecture.title = newTitle;
+                await DB.put('lectures', lecture);
+                AppState.invalidateCache();
+                await this.render();
             }
-        });
-    },
+        }
+    });
+},
 
     /**
      * Show delete guidance with folder path (does NOT modify DB)
      * User must delete file manually, then sync to update
      */
     async showDeleteGuidance(lecture, courseId) {
-        const course = await AppState.getCourse(courseId);
-        const folderPath = course.folderPath || 'your study folder';
-        const masterFolder = FileSystem.getMasterFolderName() || 'Master Folder';
-        const fullPath = `${masterFolder}\\${folderPath.replace(/\//g, '\\')}`;
+    const course = await AppState.getCourse(courseId);
+    const folderPath = course.folderPath || 'your study folder';
+    const masterFolder = FileSystem.getMasterFolderName() || 'Master Folder';
+    const fullPath = `${masterFolder}\\${folderPath.replace(/\//g, '\\')}`;
 
-        const message = `📁 To delete this file:\n\n` +
-            `1. Open File Explorer\n` +
-            `2. Go to: ${fullPath}\n` +
-            `3. Delete: ${lecture.fileName}\n` +
-            `4. Return here and click "Sync Now" on home page\n\n` +
-            `The file will be removed from this list automatically after sync.`;
+    const message = `📁 To delete this file:\n\n` +
+        `1. Open File Explorer\n` +
+        `2. Go to: ${fullPath}\n` +
+        `3. Delete: ${lecture.fileName}\n` +
+        `4. Return here and click "Sync Now" on home page\n\n` +
+        `The file will be removed from this list automatically after sync.`;
 
-        alert(message);
-    }
+    alert(message);
+}
 };
 
 // Make LectureList globally available
