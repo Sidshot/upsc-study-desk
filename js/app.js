@@ -53,17 +53,42 @@ const App = {
     setupFullScreenToggle() {
         const btn = document.getElementById('fullscreen-toggle');
         if (btn) {
-            btn.addEventListener('click', () => {
-                if (!document.fullscreenElement) {
-                    document.documentElement.requestFullscreen().catch(e => {
-                        console.error('Error enabling full-screen:', e);
-                    });
-                } else {
-                    if (document.exitFullscreen) {
-                        document.exitFullscreen();
+            console.log('[App] Fullscreen button found, attaching listener');
+            btn.addEventListener('click', async () => {
+                console.log('[App] Fullscreen button clicked');
+
+                const elem = document.body;
+
+                try {
+                    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                        if (elem.requestFullscreen) {
+                            await elem.requestFullscreen();
+                        } else if (elem.webkitRequestFullscreen) {
+                            await elem.webkitRequestFullscreen();
+                        }
+                        btn.innerHTML = '<i class="ph ph-corners-in"></i> Exit';
+                        console.log('[App] Entered fullscreen');
+                    } else {
+                        if (document.exitFullscreen) {
+                            await document.exitFullscreen();
+                        } else if (document.webkitExitFullscreen) {
+                            await document.webkitExitFullscreen();
+                        }
+                        btn.innerHTML = '<i class="ph ph-corners-out"></i> Full Screen';
+                        console.log('[App] Exited fullscreen');
                     }
+                } catch (e) {
+                    console.error('Fullscreen error:', e);
                 }
             });
+
+            document.addEventListener('fullscreenchange', () => {
+                if (!document.fullscreenElement) {
+                    btn.innerHTML = '<i class="ph ph-corners-out"></i> Full Screen';
+                }
+            });
+        } else {
+            console.log('[App] Fullscreen button NOT found');
         }
     },
 

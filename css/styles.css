@@ -2228,25 +2228,24 @@ body.sidebar-closed .sidebar-toggle:hover {
 }
 
 /* ============================================
-   Keyboard Shortcut Toast
+   Keyboard Shortcut Toast - Minimalist
    ============================================ */
 .shortcut-toast {
     position: fixed;
     top: 50%;
     left: 50%;
-    transform: translate(-50%, -50%) scale(0.8);
-    background: rgba(0, 0, 0, 0.85);
+    transform: translate(-50%, -50%) scale(0.95);
+    background: rgba(0, 0, 0, 0.75);
     color: white;
-    padding: 20px 40px;
-    border-radius: 16px;
-    font-size: 24px;
-    font-weight: 600;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
     z-index: 100000;
     opacity: 0;
-    transition: all 0.2s ease;
+    transition: all 0.1s ease-out;
     pointer-events: none;
     text-align: center;
-    backdrop-filter: blur(10px);
 }
 
 .shortcut-toast.show {

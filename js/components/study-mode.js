@@ -235,7 +235,7 @@ const StudyMode = {
                         'mute', 'volume', 'captions', 'settings', 'pip', 'fullscreen'
                     ],
                     speed: { selected: 1, options: [0.5, 0.75, 1, 1.25, 1.5, 2] },
-                    keyboard: { focused: true, global: true },
+                    keyboard: { focused: false, global: false }, // Disabled - using custom shortcuts
                     tooltips: { controls: true, seek: true },
                     // Fix blank screen issues
                     ratio: '16:9',
