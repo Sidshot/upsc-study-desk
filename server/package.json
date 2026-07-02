@@ -1,0 +1,21 @@
+{
+  "name": "mystudy-server",
+  "version": "4.0.0",
+  "description": "MyStudy companion server — local API + video streaming",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@xenova/transformers": "^2.17.2",
+    "big-integer": "^1.6.52",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "multer": "^2.1.1",
+    "sql.js": "^1.12.0",
+    "telegram": "^2.26.22",
+    "youtube-transcript": "^1.3.1"
+  }
+}

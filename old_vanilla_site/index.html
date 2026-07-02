@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPSC Pro</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#16213e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Poppins:wght@500;600;700&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="assets/phosphor/duotone/style.css">
+    <link rel="stylesheet" href="css/vendor/plyr.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Sidebar Toggle -->
+        <button id="sidebar-toggle" class="sidebar-toggle" aria-label="Toggle Menu">
+            <i class="ph-duotone ph-list"></i>
+        </button>
+
+        <!-- Full Screen Toggle -->
+        <button id="fullscreen-toggle" class="btn-pill fixed-toggle-btn" aria-label="Toggle Full Screen">
+            <i class="ph-duotone ph-corners-out"></i> Full Screen
+        </button>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <!-- Title moved to Toolbar -->
+            </div>
+            <nav class="paper-nav" id="paper-nav">
+                <!-- Papers rendered by JS -->
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Content Shell (Glass Background) -->
+            <div class="content-shell">
+                <!-- Toolbar Area (Steady) -->
+                <div class="toolbar-container">
+                    <nav class="breadcrumb" id="breadcrumb"></nav>
+
+                    <!-- Centered Title -->
+                    <div class="toolbar-title">UPSC Pro</div>
+
+                    <div class="toolbar-actions">
+                        <a href="https://sidshot.github.io/upsc-study-desk/guide.html" target="_blank"
+                            class="help-link">
+                            <i class="ph-duotone ph-question"></i> How to use this site
+                        </a>
+                        <div class="mode-indicator">
+                            <span class="mode-badge browse-mode">Browse Mode</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dynamic Content Area -->
+                <div id="content-area" class="scrollable-body">
+                    <!-- JS renders here -->
+                </div>
+
+                <footer class="app-footer">
+                    <a href="https://t.me/Indo_Sid" target="_blank" class="contact-link">
+                        <i class="ph-duotone ph-telegram-logo"></i> issues? drop me a message!
+                    </a>
+                </footer>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal Container -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal" id="modal">
+            <div class="modal-header">
+                <h2 class="modal-title" id="modal-title">Add Item</h2>
+                <button class="modal-close" id="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="text" class="modal-input" id="modal-input" placeholder="Enter name..." autocomplete="off">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+                <button class="btn btn-primary" id="modal-confirm">Add</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/utils.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/invariants.js"></script>
+    <script src="js/state.js"></script>
+    <script src="js/file-system.js"></script>
+    <script src="js/vendor/plyr.js"></script>
+    <script src="js/vendor/pdf.min.js"></script>
+    <script src="js/components/sidebar.js"></script>
+    <script src="js/components/breadcrumb.js"></script>
+    <script src="js/components/modal.js"></script>
+    <script src="js/components/drop-zone.js"></script>
+    <script src="js/components/provider-list.js"></script>
+    <script src="js/components/course-list.js"></script>
+    <script src="js/components/lecture-list.js"></script>
+    <script src="js/components/study-mode.js?v=2"></script>
+    <script src="js/components/export.js?v=2"></script>
+    <script src="js/analytics.js"></script>
+    <script src="js/components/analytics-dashboard.js"></script>
+    <script src="js/keyboard-shortcuts.js"></script>
+    <script src="js/pwa-install.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- PWA Service Worker Registration -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('sw.js')
+                    .then(reg => console.log('Service Worker registered:', reg.scope))
+                    .catch(err => console.log('SW registration failed:', err));
+            });
+        }
+    </script>
+</body>
+
+</html>
