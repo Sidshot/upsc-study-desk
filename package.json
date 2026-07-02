@@ -96,7 +96,8 @@
     },
     "win": {
       "icon": "public/omni.ico",
-      "target": "nsis"
+      "target": "nsis",
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
