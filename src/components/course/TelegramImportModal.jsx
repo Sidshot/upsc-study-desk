@@ -43,7 +43,9 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     const [selectedTopic, setSelectedTopic] = useState(null)
     const [topicFilter, setTopicFilter] = useState('')
     const [isSmartScanning, setIsSmartScanning] = useState(false)
+    const [scanJob, setScanJob] = useState(null)
     const [smartScanLimit, setSmartScanLimit] = useState(500)
+    const [onlyNewScan, setOnlyNewScan] = useState(false)
     const [cacheStatus, setCacheStatus] = useState(null)
     const [parseRules, setParseRules] = useState({
         groupBy: 'auto',
@@ -91,7 +93,9 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setSelectedTopic(null)
         setTopicFilter('')
         setIsSmartScanning(false)
+        setScanJob(null)
         setSmartScanLimit(500)
+        setOnlyNewScan(false)
         setCacheStatus(null)
         setParseRules({
             groupBy: 'auto',
@@ -303,21 +307,68 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     async function handleSmartScan(scanTopics = null) {
         if (!selectedChannel) return
         setIsSmartScanning(true)
+        setScanJob(null)
         setError('')
         try {
             const chosenTopics = scanTopics || (selectedTopic ? [selectedTopic] : [])
-            const data = await api.post('/api/telegram/scan-preview', {
+            const data = await api.post('/api/telegram/scan-jobs', {
+                chatId: selectedChannel.id,
+                chatTitle: selectedChannel.title,
+                topics: chosenTopics,
+                maxMessages: smartScanLimit,
+                onlyNew: onlyNewScan,
+            })
+            const job = data.job
+            setScanJob(job)
+            await pollScanJob(job.id, chosenTopics)
+        } catch (err) {
+            setError('Smart scan failed: ' + err.message)
+            setIsSmartScanning(false)
+        }
+    }
+
+    async function pollScanJob(jobId, chosenTopics) {
+        const data = await api.get(`/api/telegram/scan-jobs/${encodeURIComponent(jobId)}`)
+        const job = data.job
+        setScanJob(job)
+        setCacheStatus(prev => ({ ...(prev || {}), mediaCount: job.cached || prev?.mediaCount || 0 }))
+
+        if (job.status === 'completed') {
+            const preview = await api.post('/api/telegram/cached-preview', {
                 chatId: selectedChannel.id,
                 chatTitle: selectedChannel.title,
                 topics: chosenTopics,
                 maxMessages: smartScanLimit
             })
-            setCacheStatus(prev => ({ ...(prev || {}), mediaCount: data.cached || data.scanned || 0 }))
-            onImport(withServerUrls(data.course))
-        } catch (err) {
-            setError('Smart scan failed: ' + err.message)
-        } finally {
+            setCacheStatus(prev => ({ ...(prev || {}), mediaCount: job.cached || preview.cached || 0 }))
+            onImport(withServerUrls(preview.course))
             setIsSmartScanning(false)
+            return
+        }
+
+        if (job.status === 'failed') {
+            setError(job.error || 'Telegram scan failed')
+            setIsSmartScanning(false)
+            return
+        }
+
+        if (job.status === 'cancelled') {
+            setError('Telegram scan cancelled. Cached files collected so far are still available.')
+            setIsSmartScanning(false)
+            return
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 900))
+        return pollScanJob(jobId, chosenTopics)
+    }
+
+    async function handleCancelScan() {
+        if (!scanJob?.id) return
+        try {
+            const data = await api.post(`/api/telegram/scan-jobs/${encodeURIComponent(scanJob.id)}/cancel`, {})
+            setScanJob(data.job)
+        } catch (err) {
+            setError('Failed to cancel scan: ' + err.message)
         }
     }
 
@@ -391,6 +442,30 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                         <option value={2000}>2000</option>
                     </select>
                 </div>
+                {scanJob && ['running', 'cancelling'].includes(scanJob.status) && (
+                    <div className="space-y-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 p-3">
+                        <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
+                            <span>Scanning Telegram metadata</span>
+                            <span>{scanJob.progress || 0}%</span>
+                        </div>
+                        <div className="h-2 rounded-full bg-blue-100 dark:bg-blue-950 overflow-hidden">
+                            <div
+                                className="h-full bg-blue-500 transition-all"
+                                style={{ width: `${Math.max(3, scanJob.progress || 0)}%` }}
+                            />
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-blue-600/80 dark:text-blue-300/80">
+                            <span>{scanJob.scanned || 0} scanned, {scanJob.cached || 0} cached</span>
+                            <button
+                                onClick={handleCancelScan}
+                                className="font-medium hover:underline"
+                                disabled={scanJob.status === 'cancelling'}
+                            >
+                                {scanJob.status === 'cancelling' ? 'Cancelling...' : 'Cancel'}
+                            </button>
+                        </div>
+                    </div>
+                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <select
                         value={parseRules.groupBy || 'auto'}
@@ -415,6 +490,15 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     placeholder="Ignored words, comma separated: join, channel, @name"
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
                 />
+                <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-neutral-400">
+                    <input
+                        type="checkbox"
+                        checked={onlyNewScan}
+                        onChange={(e) => setOnlyNewScan(e.target.checked)}
+                        className="rounded border-gray-300 dark:border-white/20"
+                    />
+                    Scan only messages newer than the last cached Telegram message
+                </label>
                 <div className="flex gap-2">
                     <button
                         onClick={handleSaveRules}

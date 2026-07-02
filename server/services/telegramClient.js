@@ -296,6 +296,10 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
         offsetId: Number(offsetId),
     }
 
+    if (options.minId) {
+        params.minId = Number(options.minId)
+    }
+
     if (topicId) {
         params.replyTo = Number(topicId)
     }
@@ -394,22 +398,36 @@ export async function scanMessages(chatId, options = {}) {
     const collected = []
 
     for (const topicId of topicIds) {
+        if (options.shouldCancel?.()) break
         let offsetId = 0
         const topicLimit = Math.max(1, Math.ceil(maxMessages / topicIds.length))
 
         while (collected.filter(item => String(item.topicId || '') === String(topicId || '')).length < topicLimit) {
+            if (options.shouldCancel?.()) break
             const remainingForTopic = topicLimit - collected.filter(item => String(item.topicId || '') === String(topicId || '')).length
             const batch = await getMessages(
                 chatId,
                 Math.min(batchSize, remainingForTopic),
                 offsetId,
                 topicId,
-                { includeThumbnails: false }
+                { includeThumbnails: false, minId: options.minId }
             )
 
             if (batch.length === 0) break
 
-            collected.push(...batch.map(item => ({ ...item, chatId, topicId })))
+            const taggedBatch = batch.map(item => ({ ...item, chatId, topicId }))
+            collected.push(...taggedBatch)
+            await options.onBatch?.({
+                topicId,
+                batch: taggedBatch,
+                collected: collected.length,
+                maxMessages,
+            })
+            options.onProgress?.({
+                topicId,
+                collected: collected.length,
+                maxMessages,
+            })
             offsetId = Math.min(...batch.map(item => Number(item.id)).filter(Boolean))
 
             if (batch.length < Math.min(batchSize, remainingForTopic) || !offsetId) break

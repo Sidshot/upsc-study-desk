@@ -17,6 +17,7 @@ import {
     saveParseRules,
     upsertMediaBatch,
 } from '../services/telegramIndex.js'
+import { cancelScanJob, getScanJob, startScanJob } from '../services/telegramScanJobs.js'
 
 const router = express.Router()
 
@@ -268,6 +269,48 @@ router.post('/scan-preview', async (req, res) => {
         })
     } catch (err) {
         console.error('[Telegram] /scan-preview error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * POST /scan-jobs
+ * Starts a background Telegram metadata scan and returns a job id for polling.
+ */
+router.post('/scan-jobs', async (req, res) => {
+    try {
+        const { chatId, chatTitle, topics = [], maxMessages = 500, onlyNew = false } = req.body || {}
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' })
+        }
+
+        await requireClient(req)
+        const job = startScanJob({ chatId, chatTitle, topics, maxMessages, onlyNew })
+        res.status(202).json({ job })
+    } catch (err) {
+        console.error('[Telegram] /scan-jobs error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+router.get('/scan-jobs/:jobId', async (req, res) => {
+    try {
+        const job = getScanJob(req.params.jobId)
+        if (!job) return res.status(404).json({ error: 'Scan job not found' })
+        res.json({ job })
+    } catch (err) {
+        console.error('[Telegram] /scan-jobs status error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+router.post('/scan-jobs/:jobId/cancel', async (req, res) => {
+    try {
+        const job = cancelScanJob(req.params.jobId)
+        if (!job) return res.status(404).json({ error: 'Scan job not found' })
+        res.json({ job })
+    } catch (err) {
+        console.error('[Telegram] /scan-jobs cancel error:', err.message)
         res.status(500).json({ error: err.message })
     }
 })
