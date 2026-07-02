@@ -44,6 +44,15 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     const [topicFilter, setTopicFilter] = useState('')
     const [isSmartScanning, setIsSmartScanning] = useState(false)
     const [smartScanLimit, setSmartScanLimit] = useState(500)
+    const [cacheStatus, setCacheStatus] = useState(null)
+    const [parseRules, setParseRules] = useState({
+        groupBy: 'auto',
+        defaultScanLimit: 500,
+        ignoredWords: [],
+        moduleOverrides: {},
+        courseTitleOverride: '',
+    })
+    const [ignoredWordsText, setIgnoredWordsText] = useState('')
 
     const apiId = settings?.telegramApiId
     const apiHash = settings?.telegramApiHash
@@ -83,6 +92,15 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setTopicFilter('')
         setIsSmartScanning(false)
         setSmartScanLimit(500)
+        setCacheStatus(null)
+        setParseRules({
+            groupBy: 'auto',
+            defaultScanLimit: 500,
+            ignoredWords: [],
+            moduleOverrides: {},
+            courseTitleOverride: '',
+        })
+        setIgnoredWordsText('')
 
         if (!apiId || !apiHash) return
 
@@ -174,6 +192,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
     async function handleSelectChannel(channel) {
         setSelectedChannel(channel)
+        loadCacheStatus(channel.id)
         if (channel.isForum) {
             setStep('topics')
             setIsLoading(true)
@@ -198,6 +217,22 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setSelectedTopic(topic)
         setStep('videos')
         loadVideos(selectedChannel.id, topic.id, 0)
+    }
+
+    async function loadCacheStatus(chatId) {
+        try {
+            const status = await api.get(`/api/telegram/cache-status/${encodeURIComponent(chatId)}`)
+            setCacheStatus(status)
+            if (status.rules && Object.keys(status.rules).length > 0) {
+                setParseRules(prev => ({ ...prev, ...status.rules }))
+                setIgnoredWordsText((status.rules.ignoredWords || []).join(', '))
+                if (status.rules.defaultScanLimit) {
+                    setSmartScanLimit(Number(status.rules.defaultScanLimit))
+                }
+            }
+        } catch {
+            setCacheStatus(null)
+        }
     }
 
     async function loadVideos(chatId, topicId, offsetId = 0) {
@@ -277,12 +312,127 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                 topics: chosenTopics,
                 maxMessages: smartScanLimit
             })
+            setCacheStatus(prev => ({ ...(prev || {}), mediaCount: data.cached || data.scanned || 0 }))
             onImport(withServerUrls(data.course))
         } catch (err) {
             setError('Smart scan failed: ' + err.message)
         } finally {
             setIsSmartScanning(false)
         }
+    }
+
+    async function handleCachedPreview(scanTopics = null) {
+        if (!selectedChannel) return
+        setIsSmartScanning(true)
+        setError('')
+        try {
+            const chosenTopics = scanTopics || (selectedTopic ? [selectedTopic] : [])
+            const data = await api.post('/api/telegram/cached-preview', {
+                chatId: selectedChannel.id,
+                chatTitle: selectedChannel.title,
+                topics: chosenTopics,
+                maxMessages: smartScanLimit
+            })
+            if (!data.cached) {
+                setError('No cached Telegram media yet. Run Smart Scan once first.')
+                return
+            }
+            onImport(withServerUrls(data.course))
+        } catch (err) {
+            setError('Cached preview failed: ' + err.message)
+        } finally {
+            setIsSmartScanning(false)
+        }
+    }
+
+    async function handleSaveRules() {
+        if (!selectedChannel) return
+        setIsSmartScanning(true)
+        setError('')
+        try {
+            const nextRules = {
+                ...parseRules,
+                defaultScanLimit: smartScanLimit,
+                ignoredWords: ignoredWordsText
+                    .split(',')
+                    .map(word => word.trim())
+                    .filter(Boolean),
+            }
+            const data = await api.put(`/api/telegram/rules/${encodeURIComponent(selectedChannel.id)}`, nextRules)
+            setParseRules(data.rules)
+            setIgnoredWordsText((data.rules.ignoredWords || []).join(', '))
+            setCacheStatus(prev => ({ ...(prev || {}), rules: data.rules }))
+        } catch (err) {
+            setError('Failed to save rules: ' + err.message)
+        } finally {
+            setIsSmartScanning(false)
+        }
+    }
+
+    function renderSmartControls() {
+        if (!selectedChannel) return null
+        return (
+            <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3 space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                    <div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan controls</div>
+                        <div className="text-xs text-gray-500 dark:text-neutral-500">
+                            Cached: {cacheStatus?.mediaCount || 0} files
+                        </div>
+                    </div>
+                    <select
+                        value={smartScanLimit}
+                        onChange={(e) => setSmartScanLimit(Number(e.target.value))}
+                        className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                    >
+                        <option value={100}>100</option>
+                        <option value={500}>500</option>
+                        <option value={1000}>1000</option>
+                        <option value={2000}>2000</option>
+                    </select>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <select
+                        value={parseRules.groupBy || 'auto'}
+                        onChange={(e) => setParseRules(prev => ({ ...prev, groupBy: e.target.value }))}
+                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                    >
+                        <option value="auto">Auto grouping</option>
+                        <option value="topic">Group by topics</option>
+                        <option value="prefix">Group by filename prefix</option>
+                        <option value="flat">Single module</option>
+                    </select>
+                    <input
+                        value={parseRules.courseTitleOverride || ''}
+                        onChange={(e) => setParseRules(prev => ({ ...prev, courseTitleOverride: e.target.value }))}
+                        placeholder="Optional course title override"
+                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                    />
+                </div>
+                <input
+                    value={ignoredWordsText}
+                    onChange={(e) => setIgnoredWordsText(e.target.value)}
+                    placeholder="Ignored words, comma separated: join, channel, @name"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                />
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleSaveRules}
+                        disabled={isSmartScanning}
+                        className="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-60"
+                    >
+                        Save Rules
+                    </button>
+                    <button
+                        onClick={() => handleCachedPreview()}
+                        disabled={isSmartScanning || !cacheStatus?.mediaCount}
+                        className="flex-1 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 disabled:opacity-50"
+                    >
+                        Use Cached Preview
+                    </button>
+                </div>
+            </div>
+        )
     }
 
     async function handleImportSelected() {
@@ -560,24 +710,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
                             {!isLoading && (
                                 <div className="max-h-80 overflow-y-auto -mx-2 px-2 space-y-1">
-                                    {topics.length > 0 && (
-                                        <div className="mx-2 mb-2 flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-white/10 p-3">
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan depth</div>
-                                                <div className="text-xs text-gray-500 dark:text-neutral-500">Higher scans catch more lectures but take longer.</div>
-                                            </div>
-                                            <select
-                                                value={smartScanLimit}
-                                                onChange={(e) => setSmartScanLimit(Number(e.target.value))}
-                                                className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
-                                            >
-                                                <option value={100}>100</option>
-                                                <option value={500}>500</option>
-                                                <option value={1000}>1000</option>
-                                                <option value={2000}>2000</option>
-                                            </select>
-                                        </div>
-                                    )}
+                                    {topics.length > 0 && <div className="mx-2 mb-2">{renderSmartControls()}</div>}
                                     {topics.length > 0 && (
                                         <button
                                             onClick={() => handleSmartScan(topics)}
@@ -636,22 +769,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
                             {!isLoading && messages.length > 0 && (
                                 <>
-                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-white/10 p-3">
-                                        <div>
-                                            <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan depth</div>
-                                            <div className="text-xs text-gray-500 dark:text-neutral-500">Use loaded files manually, or scan deeper from Telegram.</div>
-                                        </div>
-                                        <select
-                                            value={smartScanLimit}
-                                            onChange={(e) => setSmartScanLimit(Number(e.target.value))}
-                                            className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
-                                        >
-                                            <option value={100}>100</option>
-                                            <option value={500}>500</option>
-                                            <option value={1000}>1000</option>
-                                            <option value={2000}>2000</option>
-                                        </select>
-                                    </div>
+                                    {renderSmartControls()}
                                     <button
                                         onClick={() => handleSmartScan()}
                                         disabled={isSmartScanning}

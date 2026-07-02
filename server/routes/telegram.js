@@ -10,6 +10,13 @@ import express from 'express'
 import * as tg from '../services/telegramClient.js'
 import { getOne } from '../database.js'
 import { buildTelegramCourseStructure } from '../services/telegramCourseParser.js'
+import {
+    getCacheStatus,
+    getCachedMedia,
+    getParseRules,
+    saveParseRules,
+    upsertMediaBatch,
+} from '../services/telegramIndex.js'
 
 const router = express.Router()
 
@@ -214,6 +221,7 @@ router.post('/analyze', async (req, res) => {
             topicTitle,
             topics: topicId ? [{ id: topicId, title: topicTitle }] : [],
             messages: messages.map(msg => ({ ...msg, chatId, topicId: topicId || msg.topicId || null })),
+            rules: getParseRules(chatId),
         })
 
         res.json({ course })
@@ -240,6 +248,8 @@ router.post('/scan-preview', async (req, res) => {
             ? topics.map(topic => topic.id)
             : []
         const messages = await tg.scanMessages(chatId, { topicIds, maxMessages })
+        const cache = upsertMediaBatch({ chatId, chatTitle, topics, messages })
+        const rules = getParseRules(chatId)
         const topicTitle = topics.length === 1 ? topics[0].title : null
         const course = buildTelegramCourseStructure({
             chatId,
@@ -247,15 +257,91 @@ router.post('/scan-preview', async (req, res) => {
             topicTitle,
             topics,
             messages,
+            rules,
         })
 
         res.json({
             course,
             scanned: messages.length,
+            cached: cache.totalCached,
             maxMessages: Number(maxMessages) || 500,
         })
     } catch (err) {
         console.error('[Telegram] /scan-preview error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * GET /cache-status/:chatId
+ * Returns local Telegram metadata cache status and saved parsing rules.
+ */
+router.get('/cache-status/:chatId', async (req, res) => {
+    try {
+        res.json(getCacheStatus(req.params.chatId))
+    } catch (err) {
+        console.error('[Telegram] /cache-status error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * POST /cached-preview
+ * Body: { chatId, chatTitle, topics, maxMessages }
+ * Builds an import preview from already-indexed Telegram metadata.
+ */
+router.post('/cached-preview', async (req, res) => {
+    try {
+        const { chatId, chatTitle, topics = [], maxMessages = 1000 } = req.body || {}
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' })
+        }
+
+        const topicIds = Array.isArray(topics) && topics.length > 0
+            ? topics.map(topic => topic.id)
+            : []
+        const messages = getCachedMedia(chatId, { topicIds, limit: maxMessages })
+        const rules = getParseRules(chatId)
+        const topicTitle = topics.length === 1 ? topics[0].title : null
+        const course = buildTelegramCourseStructure({
+            chatId,
+            chatTitle,
+            topicTitle,
+            topics,
+            messages,
+            rules,
+        })
+
+        res.json({
+            course,
+            cached: messages.length,
+            maxMessages: Number(maxMessages) || 1000,
+        })
+    } catch (err) {
+        console.error('[Telegram] /cached-preview error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * GET/PUT /rules/:chatId
+ * Reads or saves per-group parsing preferences.
+ */
+router.get('/rules/:chatId', async (req, res) => {
+    try {
+        res.json(getParseRules(req.params.chatId))
+    } catch (err) {
+        console.error('[Telegram] /rules GET error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+router.put('/rules/:chatId', async (req, res) => {
+    try {
+        const rules = saveParseRules(req.params.chatId, req.body || {})
+        res.json({ rules })
+    } catch (err) {
+        console.error('[Telegram] /rules PUT error:', err.message)
         res.status(500).json({ error: err.message })
     }
 })

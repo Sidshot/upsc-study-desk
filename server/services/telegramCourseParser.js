@@ -39,8 +39,19 @@ function titleCaseFallback(value = '') {
     return cleaned || 'Untitled'
 }
 
-function cleanLectureTitle(fileName = '', message = '') {
+function removeIgnoredWords(value, ignoredWords = []) {
+    let result = value
+    for (const word of ignoredWords) {
+        const escaped = String(word).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+        if (!escaped) continue
+        result = result.replace(new RegExp(`\\b${escaped}\\b`, 'ig'), ' ')
+    }
+    return normalizeSpaces(result)
+}
+
+function cleanLectureTitle(fileName = '', message = '', rules = {}) {
     let base = normalizeSpaces(stripExtension(fileName || message || 'Untitled'))
+    base = removeIgnoredWords(base, rules.ignoredWords || [])
     for (const pattern of LECTURE_PATTERNS) {
         base = base.replace(pattern, '').trim()
     }
@@ -101,13 +112,13 @@ function compareAnalyzedItems(a, b) {
     return naturalSort(a.fileName, b.fileName)
 }
 
-function analyzeItem(item, source) {
+function analyzeItem(item, source, rules = {}) {
     const fileName = item.fileName || `Telegram_${item.id}`
     const combinedText = `${fileName} ${item.message || ''}`
     const lectureNumber = extractLectureNumber(combinedText)
     const kind = detectResourceKind(item)
     const prefix = extractPrefix(fileName, lectureNumber)
-    const title = cleanLectureTitle(fileName, item.message)
+    const title = cleanLectureTitle(fileName, item.message, rules)
     const confidence = Math.min(1, 0.35 + (lectureNumber ? 0.35 : 0) + (prefix ? 0.15 : 0) + (kind !== 'resource' ? 0.15 : 0))
 
     return {
@@ -154,14 +165,19 @@ function toImportVideo(item, order) {
     }
 }
 
-function buildModule(title, items, order) {
+function applyModuleOverride(title, rules = {}) {
+    const overrides = rules.moduleOverrides || {}
+    return overrides[title] || overrides[title?.toLowerCase?.()] || title
+}
+
+function buildModule(title, items, order, rules = {}) {
     const sorted = [...items].sort(compareAnalyzedItems)
     const videos = sorted.map((item, index) => toImportVideo(item, index))
     const totalDuration = videos.reduce((sum, video) => sum + (video.type === 'video' ? Number(video.duration || 0) : 0), 0)
     const totalVideos = videos.filter(video => video.type !== 'pdf').length
 
     return {
-        title: titleCaseFallback(title),
+        title: titleCaseFallback(applyModuleOverride(title, rules)),
         originalTitle: title,
         order,
         videos,
@@ -176,7 +192,7 @@ function buildModule(title, items, order) {
     }
 }
 
-function splitIntoPrefixModules(items, fallbackTitle) {
+function splitIntoPrefixModules(items, fallbackTitle, rules = {}) {
     const prefixCounts = new Map()
     for (const item of items) {
         if (!item.inferredPrefix) continue
@@ -187,8 +203,8 @@ function splitIntoPrefixModules(items, fallbackTitle) {
         .filter(([, count]) => count >= 3)
         .map(([prefix]) => prefix)
 
-    if (strongPrefixes.length < 2) {
-        return [buildModule(fallbackTitle, items, 0)]
+    if (rules.groupBy === 'flat' || strongPrefixes.length < 2) {
+        return [buildModule(fallbackTitle, items, 0, rules)]
     }
 
     const modules = []
@@ -196,24 +212,24 @@ function splitIntoPrefixModules(items, fallbackTitle) {
     strongPrefixes.sort(naturalSort).forEach((prefix, index) => {
         const group = items.filter(item => item.inferredPrefix === prefix)
         group.forEach(item => used.add(item.id))
-        modules.push(buildModule(prefix, group, index))
+        modules.push(buildModule(prefix, group, index, rules))
     })
 
     const remaining = items.filter(item => !used.has(item.id))
     if (remaining.length > 0) {
-        modules.push(buildModule('Unsorted Telegram Media', remaining, modules.length))
+        modules.push(buildModule('Unsorted Telegram Media', remaining, modules.length, rules))
     }
 
     return modules
 }
 
-export function buildTelegramCourseStructure({ chatTitle, topicTitle, topics = [], messages = [], chatId }) {
+export function buildTelegramCourseStructure({ chatTitle, topicTitle, topics = [], messages = [], chatId, rules = {} }) {
     const source = {
         streamUrlFor: (item) => `/api/telegram/stream/${encodeURIComponent(item.chatId || chatId)}/${encodeURIComponent(item.id)}`,
     }
 
     const enriched = messages
-        .map(item => analyzeItem({ ...item, chatId: item.chatId || chatId }, source))
+        .map(item => analyzeItem({ ...item, chatId: item.chatId || chatId }, source, rules))
         .filter(item => item.url)
 
     const byTopic = new Map()
@@ -224,13 +240,15 @@ export function buildTelegramCourseStructure({ chatTitle, topicTitle, topics = [
     }
 
     let modules = []
-    if (byTopic.size <= 1) {
-        modules = splitIntoPrefixModules(enriched, topicTitle || chatTitle || 'Telegram Import')
+    if (rules.groupBy === 'flat') {
+        modules = [buildModule(topicTitle || chatTitle || 'Telegram Import', enriched, 0, rules)]
+    } else if (byTopic.size <= 1 || rules.groupBy === 'prefix') {
+        modules = splitIntoPrefixModules(enriched, topicTitle || chatTitle || 'Telegram Import', rules)
     } else {
         let order = 0
         for (const [topicId, items] of byTopic.entries()) {
             const topic = topics.find(t => String(t.id) === String(topicId))
-            modules.push(buildModule(topic?.title || items[0]?.topicTitle || `Topic ${topicId}`, items, order++))
+            modules.push(buildModule(topic?.title || items[0]?.topicTitle || `Topic ${topicId}`, items, order++, rules))
         }
     }
 
@@ -241,7 +259,7 @@ export function buildTelegramCourseStructure({ chatTitle, topicTitle, topics = [
     const lowConfidence = enriched.filter(item => item.confidence < 0.65).length
 
     return {
-        title: titleCaseFallback(topicTitle || chatTitle || 'Telegram Course'),
+        title: titleCaseFallback(rules.courseTitleOverride || topicTitle || chatTitle || 'Telegram Course'),
         originalTitle: topicTitle || chatTitle || 'Telegram Course',
         source: 'telegram',
         sourceType: 'telegram',

@@ -244,6 +244,7 @@ function runMigrations() {
         { name: '001_initial_schema', fn: migration001 },
         { name: '002_subtitles_dubbing_schema', fn: migration002 },
         { name: '003_video_types', fn: migration003 },
+        { name: '004_telegram_index', fn: migration004 },
     ]
 
     for (const migration of migrations) {
@@ -472,5 +473,52 @@ function migration003() {
     const hasType = columns.some(col => col.name === 'type')
     if (!hasType) {
         db.run("ALTER TABLE videos ADD COLUMN type TEXT DEFAULT 'video'")
+    }
+}
+
+/**
+ * Migration 004: Telegram source index and per-group parsing rules.
+ */
+function migration004() {
+    const statements = [
+        `CREATE TABLE IF NOT EXISTS telegram_sources (
+            chat_id TEXT PRIMARY KEY,
+            title TEXT NOT NULL,
+            is_forum INTEGER DEFAULT 0,
+            access_hash TEXT,
+            last_scanned_at TEXT,
+            last_message_id INTEGER DEFAULT 0,
+            media_count INTEGER DEFAULT 0,
+            custom_metadata TEXT DEFAULT '{}'
+        )`,
+        `CREATE TABLE IF NOT EXISTS telegram_media_index (
+            id TEXT PRIMARY KEY,
+            chat_id TEXT NOT NULL,
+            topic_id TEXT,
+            topic_title TEXT,
+            message_id INTEGER NOT NULL,
+            message_date INTEGER DEFAULT 0,
+            file_name TEXT DEFAULT '',
+            mime_type TEXT DEFAULT '',
+            media_type TEXT DEFAULT 'video',
+            file_size INTEGER DEFAULT 0,
+            duration REAL DEFAULT 0,
+            caption TEXT DEFAULT '',
+            raw_json TEXT DEFAULT '{}',
+            indexed_at TEXT NOT NULL,
+            UNIQUE(chat_id, topic_id, message_id)
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_tg_media_chat ON telegram_media_index(chat_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_tg_media_topic ON telegram_media_index(chat_id, topic_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_tg_media_message ON telegram_media_index(chat_id, message_id)`,
+        `CREATE TABLE IF NOT EXISTS telegram_parse_rules (
+            chat_id TEXT PRIMARY KEY,
+            rules_json TEXT DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        )`,
+    ]
+
+    for (const stmt of statements) {
+        db.run(stmt)
     }
 }
