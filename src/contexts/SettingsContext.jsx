@@ -71,12 +71,6 @@ export function SettingsProvider({ children }) {
                 delete merged.googleDriveApiKey
             }
 
-            // One-time migration: move old .env OpenRouter key if user had one
-            const envKey = import.meta.env.VITE_OPENROUTER_API_KEY
-            if (envKey && !merged.openRouterApiKey) {
-                merged.openRouterApiKey = envKey
-            }
-
             // Migration: volume
             const oldVolume = localStorage.getItem('tutin_volume')
             if (oldVolume && !merged.volume) {

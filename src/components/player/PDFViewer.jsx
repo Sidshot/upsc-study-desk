@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { Document, Page, pdfjs } from 'react-pdf'
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Download } from 'lucide-react'
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 
 // Required styles for react-pdf
 import 'react-pdf/dist/Page/AnnotationLayer.css'
 import 'react-pdf/dist/Page/TextLayer.css'
 
-// Set up the worker using CDN to avoid Vite configuration complexities
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`
+pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
 export default function PDFViewer({ fileUrl, title, onLoad }) {
     const [numPages, setNumPages] = useState(null)

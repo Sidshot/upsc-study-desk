@@ -9,8 +9,31 @@ import { translateChunks } from '../utils/aiTranslation.js'
 
 const router = express.Router()
 
+const CAPTION_UPLOAD_LIMIT_BYTES = 5 * 1024 * 1024
+const CAPTION_EXTENSIONS = new Set(['.srt', '.vtt', '.txt'])
+
 // Multer for memory upload
-const upload = multer({ storage: multer.memoryStorage() })
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: CAPTION_UPLOAD_LIMIT_BYTES, files: 1 },
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname || '').toLowerCase()
+        if (!CAPTION_EXTENSIONS.has(ext)) {
+            return cb(new Error('Only SRT, VTT, and TXT caption files are supported.'))
+        }
+        cb(null, true)
+    },
+})
+
+function captionUpload(req, res, next) {
+    upload.single('file')(req, res, (err) => {
+        if (!err) return next()
+        if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+            return res.status(413).json({ error: 'Caption file is too large. Maximum size is 5 MB.' })
+        }
+        return res.status(400).json({ error: err.message || 'Invalid caption upload' })
+    })
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -44,7 +67,7 @@ function getVideoMeta(videoId) {
 // ── Routes ────────────────────────────────────────────────────
 
 // POST /api/transcripts/:videoId/upload
-router.post('/:videoId/upload', upload.single('file'), (req, res) => {
+router.post('/:videoId/upload', captionUpload, (req, res) => {
     try {
         if (!req.file) return res.status(400).json({ error: 'No file uploaded' })
         

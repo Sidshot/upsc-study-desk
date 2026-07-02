@@ -35,7 +35,7 @@ export function extractLangCode(filename, baseName = '') {
     // 1. Try strict matching if the file starts with the video base name
     if (baseName && filename.toLowerCase().startsWith(baseName.toLowerCase())) {
         const withoutBase = nameWithoutExt.slice(baseName.length)
-        const strictMatch = withoutBase.match(/^[\.\s-]*([a-z]{2,})$/)
+        const strictMatch = withoutBase.match(/^[.\s-]*([a-z]{2,})$/)
         if (strictMatch) {
             const code = strictMatch[1]
             if (LANG_NAME_MAP[code]) return LANG_NAME_MAP[code]

@@ -11,10 +11,22 @@ function getSummariesDir() {
     return dir
 }
 
+function getSummaryPath(videoId) {
+    const safeId = path.basename(String(videoId || '')).replace(/[^a-zA-Z0-9_.-]/g, '_')
+    if (!safeId) throw new Error('Invalid video id')
+
+    const summariesDir = path.resolve(getSummariesDir())
+    const filePath = path.resolve(summariesDir, `${safeId}.md`)
+    if (!filePath.startsWith(`${summariesDir}${path.sep}`)) {
+        throw new Error('Invalid summary path')
+    }
+    return filePath
+}
+
 // GET /api/summaries/:videoId
 router.get('/:videoId', (req, res) => {
     try {
-        const filePath = path.join(getSummariesDir(), `${req.params.videoId}.md`)
+        const filePath = getSummaryPath(req.params.videoId)
         if (fs.existsSync(filePath)) {
             const content = fs.readFileSync(filePath, 'utf8')
             res.json({ content })
@@ -31,7 +43,7 @@ router.put('/:videoId', (req, res) => {
     const { content } = req.body
     
     try {
-        const filePath = path.join(getSummariesDir(), `${req.params.videoId}.md`)
+        const filePath = getSummaryPath(req.params.videoId)
         fs.writeFileSync(filePath, content || '')
         
         run(`UPDATE videos SET has_summary = 1, summary_generated_at = ? WHERE id = ?`, [
@@ -48,7 +60,7 @@ router.put('/:videoId', (req, res) => {
 // DELETE /api/summaries/:videoId
 router.delete('/:videoId', (req, res) => {
     try {
-        const filePath = path.join(getSummariesDir(), `${req.params.videoId}.md`)
+        const filePath = getSummaryPath(req.params.videoId)
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath)
         }

@@ -2,11 +2,13 @@ import { useState, useRef } from 'react'
 import {
     X, Sun, Moon, Monitor, Palette, Layout, Type, Settings,
     Play, SkipForward, FastForward, Check, Download, Upload, Database, AlertTriangle, KeyRound, Eye, EyeOff, ExternalLink, Sparkles, Clock, PictureInPicture, MessageSquare, Send, Bug, Lightbulb, MessageCircle
+    , HelpCircle, RefreshCw
 } from 'lucide-react'
 import { useSettings } from '../../contexts/SettingsContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useNotification } from '../../contexts/NotificationContext'
 import { exportAllData, clearAllData, importData, recalculateAllCoursesProgress, detectAllDurations } from '../../utils/db'
+import * as api from '../../utils/api'
 
 const accentColors = [
     { name: 'Classic / Glass', value: 'classic' },
@@ -39,6 +41,9 @@ function SettingsModal({ isOpen, onClose }) {
     const [feedbackEmail, setFeedbackEmail] = useState('')
     const [sendingFeedback, setSendingFeedback] = useState(false)
     const [feedbackSent, setFeedbackSent] = useState(false)
+    const [updateStatus, setUpdateStatus] = useState(null)
+    const [checkingUpdate, setCheckingUpdate] = useState(false)
+    const [downloadingUpdate, setDownloadingUpdate] = useState(false)
     const { showNotification } = useNotification()
 
     if (!isOpen) return null
@@ -48,8 +53,50 @@ function SettingsModal({ isOpen, onClose }) {
         { id: 'shortcuts', label: 'Shortcuts', icon: FastForward },
         { id: 'ai_keys', label: 'AI & API Keys', icon: Sparkles },
         { id: 'data', label: 'Data', icon: Database },
+        { id: 'help', label: 'Help & Updates', icon: HelpCircle },
         { id: 'feedback', label: 'Feedback', icon: MessageSquare }
     ]
+
+    const refreshUpdateStatus = async () => {
+        const status = await api.get('/api/app/update/status')
+        setUpdateStatus(status)
+        return status
+    }
+
+    const checkForUpdates = async () => {
+        try {
+            setCheckingUpdate(true)
+            const status = await api.post('/api/app/update/check', {})
+            setUpdateStatus(status)
+            showNotification(status.message || 'Update check complete', status.error ? 'error' : 'success')
+        } catch (err) {
+            showNotification(err.message || 'Failed to check for updates', 'error')
+        } finally {
+            setCheckingUpdate(false)
+        }
+    }
+
+    const downloadUpdate = async () => {
+        try {
+            setDownloadingUpdate(true)
+            const status = await api.post('/api/app/update/download', {})
+            setUpdateStatus(status)
+            showNotification(status.message || 'Update download started', 'success')
+            setTimeout(refreshUpdateStatus, 1500)
+        } catch (err) {
+            showNotification(err.message || 'Failed to download update', 'error')
+        } finally {
+            setDownloadingUpdate(false)
+        }
+    }
+
+    const restartToUpdate = async () => {
+        try {
+            await api.post('/api/app/update/restart', {})
+        } catch (err) {
+            showNotification(err.message || 'Failed to restart for update', 'error')
+        }
+    }
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -666,6 +713,101 @@ function SettingsModal({ isOpen, onClose }) {
                                             Reset
                                         </button>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Help & Updates Tab */}
+                        {activeTab === 'help' && (
+                            <div className="space-y-5">
+                                <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-bg">
+                                    <div className="flex items-start gap-3">
+                                        <HelpCircle className="w-5 h-5 text-primary-fg mt-0.5" />
+                                        <div>
+                                            <h3 className="text-sm font-semibold mb-1">Getting Started</h3>
+                                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                                                Add a local course folder from the Add Paper button, or use the dropdown to import from YouTube, Google Drive, external links, or Telegram. Local videos stay on your computer; Omni stores course progress, notes, settings, transcripts, and generated summaries in your Windows user data folder.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-3">
+                                    {[
+                                        {
+                                            title: 'Google API key',
+                                            body: 'Used for YouTube playlists and Google Drive imports. Create an API key in Google Cloud Console, enable the YouTube Data API and Drive API, then paste it in AI & API Keys.',
+                                        },
+                                        {
+                                            title: 'OpenRouter API key',
+                                            body: 'Used for AI metadata and summaries. Create a key at OpenRouter, paste it in AI & API Keys, and choose the model you want Omni to use.',
+                                        },
+                                        {
+                                            title: 'Telegram API ID and hash',
+                                            body: 'Used for Telegram imports. Get them from my.telegram.org, paste both values in AI & API Keys, then sign in from the Telegram import flow.',
+                                        },
+                                    ].map(item => (
+                                        <div key={item.title} className="p-4 rounded-lg border border-light-border dark:border-dark-border">
+                                            <h4 className="text-sm font-semibold mb-1">{item.title}</h4>
+                                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">{item.body}</p>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                <div className="p-4 rounded-lg border border-light-border dark:border-dark-border bg-light-surface dark:bg-dark-bg">
+                                    <div className="flex items-start justify-between gap-4">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <RefreshCw className="w-4 h-4 text-primary-fg" />
+                                                <h3 className="text-sm font-semibold">App Updates</h3>
+                                            </div>
+                                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                                                Updates replace the app files only. Your courses, progress, notes, API keys, and settings stay in your own Windows user data folder.
+                                            </p>
+                                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">
+                                                Update source: {updateStatus?.updateRepository || 'Sidshot/upsc-study-desk'}
+                                            </p>
+                                            <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">
+                                                {updateStatus?.message || 'Click Check for updates to ask the installed app for the latest release.'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2 mt-4">
+                                        <button
+                                            onClick={checkForUpdates}
+                                            disabled={checkingUpdate}
+                                            className="px-3 py-1.5 rounded-lg bg-primary text-primary-content hover:bg-primary-hover transition-colors text-xs font-medium disabled:opacity-60"
+                                        >
+                                            {checkingUpdate ? 'Checking...' : 'Check for updates'}
+                                        </button>
+
+                                        {updateStatus?.updateAvailable && !updateStatus?.downloaded && (
+                                            <button
+                                                onClick={downloadUpdate}
+                                                disabled={downloadingUpdate}
+                                                className="px-3 py-1.5 rounded-lg border border-light-border dark:border-dark-border hover:bg-light-surface dark:hover:bg-dark-bg transition-colors text-xs font-medium disabled:opacity-60"
+                                            >
+                                                {downloadingUpdate ? 'Downloading...' : 'Download update'}
+                                            </button>
+                                        )}
+
+                                        {updateStatus?.downloaded && (
+                                            <button
+                                                onClick={restartToUpdate}
+                                                className="px-3 py-1.5 rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors text-xs font-medium"
+                                            >
+                                                Restart and install
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="p-4 rounded-lg border border-light-border dark:border-dark-border">
+                                    <h3 className="text-sm font-semibold mb-1">Backups</h3>
+                                    <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                                        Use the Data tab to export a JSON backup before major changes. Importing a backup merges it with existing data, while Reset All Data clears only the current Windows user profile.
+                                    </p>
                                 </div>
                             </div>
                         )}

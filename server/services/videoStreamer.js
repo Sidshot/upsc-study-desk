@@ -55,7 +55,10 @@ function isPathAllowed(filePath) {
     if (allowedRoots.length === 0) return false
 
     const resolved = path.resolve(filePath)
-    return allowedRoots.some(root => resolved.startsWith(root))
+    return allowedRoots.some(root => {
+        const relative = path.relative(root, resolved)
+        return relative === '' || (!relative.startsWith('..') && !path.isAbsolute(relative))
+    })
 }
 
 /**

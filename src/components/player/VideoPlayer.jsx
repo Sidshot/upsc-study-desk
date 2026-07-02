@@ -776,7 +776,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     togglePiP()
                     break
                 case ',':
-                case '<':
+                case '<': {
                     e.preventDefault()
                     // Decrease speed
                     const currentIdx = speedOptions.indexOf(playbackSpeed)
@@ -784,8 +784,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                         changeSpeed(speedOptions[currentIdx - 1])
                     }
                     break
+                }
                 case '.':
-                case '>':
+                case '>': {
                     e.preventDefault()
                     // Increase speed
                     const currentSpeedIdx = speedOptions.indexOf(playbackSpeed)
@@ -793,6 +794,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                         changeSpeed(speedOptions[currentSpeedIdx + 1])
                     }
                     break
+                }
                 case 'n':
                     if (e.shiftKey) {
                         e.preventDefault()

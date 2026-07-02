@@ -50,14 +50,14 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setIsLoading(true)
         setError('')
         try {
-            const data = await api.get(`/api/telegram/dialogs?apiId=${encodeURIComponent(apiId)}&apiHash=${encodeURIComponent(apiHash)}`)
+            const data = await api.get('/api/telegram/dialogs')
             setChannels(data.dialogs || data || [])
         } catch (err) {
             setError('Failed to load channels: ' + err.message)
         } finally {
             setIsLoading(false)
         }
-    }, [apiId, apiHash])
+    }, [])
 
     // Check status on open
     useEffect(() => {
@@ -84,7 +84,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
         async function checkStatus() {
             try {
-                const data = await api.get(`/api/telegram/status?apiId=${encodeURIComponent(apiId)}&apiHash=${encodeURIComponent(apiHash)}`)
+                const data = await api.get('/api/telegram/status')
                 if (data.loggedIn) {
                     setStep('channels')
                     loadDialogs()
@@ -176,7 +176,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
             setError('')
             setTopics([])
             try {
-                const data = await api.get(`/api/telegram/topics/${encodeURIComponent(channel.id)}?apiId=${encodeURIComponent(apiId)}&apiHash=${encodeURIComponent(apiHash)}`)
+                const data = await api.get(`/api/telegram/topics/${encodeURIComponent(channel.id)}`)
                 setTopics(data || [])
             } catch (err) {
                 setError('Failed to load topics: ' + err.message)
@@ -204,7 +204,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setIsLoading(true)
         setError('')
         try {
-            let url = `/api/telegram/messages/${encodeURIComponent(chatId)}?apiId=${encodeURIComponent(apiId)}&apiHash=${encodeURIComponent(apiHash)}&limit=100&offsetId=${offsetId}`
+            let url = `/api/telegram/messages/${encodeURIComponent(chatId)}?limit=100&offsetId=${offsetId}`
             if (topicId) {
                 url += `&topicId=${encodeURIComponent(topicId)}`
             }
@@ -252,7 +252,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                 title: selectedTopic ? selectedTopic.title : selectedChannel.title,
                 videos: selected.map(msg => ({
                     title: msg.fileName || `Media ${msg.id}`,
-                    url: `${api.SERVER_URL}/api/telegram/stream/${encodeURIComponent(selectedChannel.id)}/${encodeURIComponent(msg.id)}?apiId=${encodeURIComponent(apiId)}&apiHash=${encodeURIComponent(apiHash)}`,
+                    url: `${api.SERVER_URL}/api/telegram/stream/${encodeURIComponent(selectedChannel.id)}/${encodeURIComponent(msg.id)}`,
                     duration: msg.duration || 0,
                     type: msg.type || 'video',
                 }))

@@ -34,24 +34,69 @@ import fsRouter from './routes/filesystem.js'
 import dubbingRouter from './routes/dubbing.js'
 import youtubeRouter from './routes/youtube.js'
 import telegramRouter from './routes/telegram.js'
+import appRouter from './routes/app.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
 const app = express()
 const DEFAULT_PORT = 9474
+const APP_VERSION = process.env.OMNI_APP_VERSION || process.env.npm_package_version || '4.0.1'
+
+function hasFrontendIndex(dir) {
+    return Boolean(dir) && fs.existsSync(path.join(dir, 'index.html'))
+}
+
+function resolveFrontendDistPath() {
+    const appPath = process.env.OMNI_APP_PATH
+    const resourcesPath = process.env.OMNI_RESOURCES_PATH
+    const localDistPath = path.resolve(__dirname, '../dist')
+
+    const candidates = [
+        process.env.OMNI_DIST_PATH,
+        resourcesPath && path.join(resourcesPath, 'app.asar.unpacked', 'dist'),
+        resourcesPath && path.join(resourcesPath, 'app', 'dist'),
+        appPath && path.join(appPath.replace('app.asar', 'app.asar.unpacked'), 'dist'),
+        appPath && path.join(appPath, 'dist'),
+        localDistPath.replace('app.asar', 'app.asar.unpacked'),
+        localDistPath,
+    ].filter(Boolean)
+
+    for (const candidate of candidates) {
+        if (hasFrontendIndex(candidate)) {
+            return candidate
+        }
+    }
+
+    return null
+}
 
 // ============================================
 // MIDDLEWARE
 // ============================================
 
-// CORS — allow the React dev server (and any localhost origin)
+const ALLOWED_ORIGIN_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]'])
+const ALLOWED_ORIGIN_PORTS = new Set(['9474', '5173', ''])
+
+function isAllowedLocalOrigin(origin) {
+    try {
+        const parsed = new URL(origin)
+        return (
+            (parsed.protocol === 'http:' || parsed.protocol === 'https:') &&
+            ALLOWED_ORIGIN_HOSTS.has(parsed.hostname) &&
+            ALLOWED_ORIGIN_PORTS.has(parsed.port)
+        )
+    } catch {
+        return false
+    }
+}
+
+// CORS - allow only the desktop app and known local dev origins.
 app.use(cors({
     origin: (origin, callback) => {
         // Allow requests with no origin (same-origin, curl, etc.)
         if (!origin) return callback(null, true)
-        // Allow any localhost origin
-        if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+        if (isAllowedLocalOrigin(origin)) {
             return callback(null, true)
         }
         callback(new Error('CORS not allowed'), false)
@@ -69,7 +114,7 @@ app.use(express.json({ limit: '50mb' }))
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
-        version: '4.0.0',
+        version: APP_VERSION,
         port: server?.address()?.port || DEFAULT_PORT,
         dataDir: getDataDir(),
         uptime: Math.floor(process.uptime()),
@@ -102,14 +147,17 @@ app.use('/api/fs', fsRouter)
 app.use('/api/dub', dubbingRouter)
 app.use('/api/youtube', youtubeRouter)
 app.use('/api/telegram', telegramRouter)
+app.use('/api/app', appRouter)
 
 // ============================================
 // STATIC FILE SERVING (PRODUCTION)
 // ============================================
 
 if (process.env.NODE_ENV === 'production') {
-    const distPath = path.join(__dirname, '../dist')
-    if (fs.existsSync(distPath)) {
+    const distPath = resolveFrontendDistPath()
+
+    if (distPath) {
+        console.log(`[Static] Serving frontend from: ${distPath}`)
         app.use(express.static(distPath))
         app.use((req, res, next) => {
             if (req.method === 'GET' && !req.path.startsWith('/api/')) {
@@ -119,7 +167,7 @@ if (process.env.NODE_ENV === 'production') {
             }
         })
     } else {
-        console.warn('\n[Warning] Production mode enabled but dist/ folder not found. Please run "npm run build".\n')
+        console.warn('\n[Warning] Production mode enabled but no frontend index.html was found. Please run "npm run build".\n')
     }
 }
 // ============================================
@@ -142,8 +190,9 @@ async function start() {
         console.error('[PathRepair] Error:', err.message)
     }
 
-    // Find available port and start
-    const port = await findAvailablePort(DEFAULT_PORT)
+    // The desktop UI and API client both use this fixed local port.
+    // Failing loudly is safer than starting on a different port that the UI cannot reach.
+    const port = await reserveRequiredPort(DEFAULT_PORT)
 
     server = app.listen(port, '127.0.0.1', () => {
         console.log('')
@@ -216,15 +265,15 @@ function loadAllowedRoots() {
     }
 }
 
-function findAvailablePort(startPort) {
+function reserveRequiredPort(port) {
     return new Promise((resolve, reject) => {
-        const testServer = app.listen(startPort, '127.0.0.1')
+        const testServer = app.listen(port, '127.0.0.1')
         testServer.on('listening', () => {
-            testServer.close(() => resolve(startPort))
+            testServer.close(() => resolve(port))
         })
         testServer.on('error', (err) => {
             if (err.code === 'EADDRINUSE') {
-                resolve(findAvailablePort(startPort + 1))
+                reject(new Error(`Port ${port} is already in use. Close the other Omni/MyStudy instance and restart the app.`))
             } else {
                 reject(err)
             }

@@ -22,6 +22,7 @@ import { getDataDir } from '../database.js'
 // ── Module-level state ──────────────────────────────────────────────────────
 let client = null
 let currentPhone = null   // remembered between sendCode → signIn
+let currentApiKey = null
 
 /**
  * Path to the persisted session string on disk
@@ -64,6 +65,19 @@ function saveSession() {
  * apiId / apiHash come from the frontend (stored in user settings).
  */
 export async function getClient(apiId, apiHash) {
+    if (!apiId || !apiHash || !Number.isFinite(Number(apiId))) {
+        throw new Error('Valid Telegram API ID and API Hash are required')
+    }
+
+    const nextApiKey = `${Number(apiId)}:${apiHash}`
+    if (client && currentApiKey && currentApiKey !== nextApiKey) {
+        try {
+            await client.disconnect()
+        } catch { /* best effort */ }
+        client = null
+        currentPhone = null
+    }
+
     if (client) {
         if (!client.connected) {
             await client.connect()
@@ -82,6 +96,7 @@ export async function getClient(apiId, apiHash) {
     })
 
     await client.connect()
+    currentApiKey = nextApiKey
     console.log('[Telegram] Client connected (session length:', sessionStr.length, ')')
     return client
 }
@@ -514,4 +529,5 @@ export async function logout() {
 
     client = null
     currentPhone = null
+    currentApiKey = null
 }

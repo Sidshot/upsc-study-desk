@@ -8,8 +8,37 @@
 
 import express from 'express'
 import * as tg from '../services/telegramClient.js'
+import { getOne } from '../database.js'
 
 const router = express.Router()
+
+function readSetting(key) {
+    const row = getOne('SELECT value FROM settings WHERE key = ?', [key])
+    if (!row?.value) return ''
+    try {
+        return JSON.parse(row.value) || ''
+    } catch {
+        return row.value || ''
+    }
+}
+
+function resolveCredentials(req) {
+    return {
+        apiId: req.body?.apiId || req.query?.apiId || readSetting('telegramApiId'),
+        apiHash: req.body?.apiHash || req.query?.apiHash || readSetting('telegramApiHash'),
+    }
+}
+
+async function requireClient(req) {
+    const { apiId, apiHash } = resolveCredentials(req)
+    if (!apiId || !apiHash) {
+        const err = new Error('Telegram API credentials are required. Add them in Settings first.')
+        err.statusCode = 400
+        throw err
+    }
+    await tg.getClient(apiId, apiHash)
+    return { apiId, apiHash }
+}
 
 // ── Auth & Status ───────────────────────────────────────────────────────────
 
@@ -19,6 +48,14 @@ const router = express.Router()
  */
 router.get('/status', async (req, res) => {
     try {
+        try {
+            await requireClient(req)
+        } catch (err) {
+            if (err.statusCode === 400) {
+                return res.json({ connected: false, loggedIn: false })
+            }
+            throw err
+        }
         const status = await tg.getStatus()
         res.json(status)
     } catch (err) {
@@ -34,9 +71,10 @@ router.get('/status', async (req, res) => {
  */
 router.post('/send-code', async (req, res) => {
     try {
-        const { apiId, apiHash, phone } = req.body
+        const { apiId, apiHash } = resolveCredentials(req)
+        const { phone } = req.body
         if (!apiId || !apiHash || !phone) {
-            return res.status(400).json({ error: 'apiId, apiHash, and phone are required' })
+            return res.status(400).json({ error: 'Telegram API credentials and phone are required' })
         }
 
         const result = await tg.sendCode(apiId, apiHash, phone)
@@ -54,9 +92,10 @@ router.post('/send-code', async (req, res) => {
  */
 router.post('/sign-in', async (req, res) => {
     try {
-        const { apiId, apiHash, phone, code, phoneCodeHash } = req.body
+        const { apiId, apiHash } = resolveCredentials(req)
+        const { phone, code, phoneCodeHash } = req.body
         if (!apiId || !apiHash || !phone || !code || !phoneCodeHash) {
-            return res.status(400).json({ error: 'apiId, apiHash, phone, code, and phoneCodeHash are required' })
+            return res.status(400).json({ error: 'Telegram API credentials, phone, code, and phoneCodeHash are required' })
         }
 
         const result = await tg.signIn(apiId, apiHash, phone, code, phoneCodeHash)
@@ -109,13 +148,8 @@ router.post('/logout', async (req, res) => {
  */
 router.get('/dialogs', async (req, res) => {
     try {
-        const { apiId, apiHash } = req.query
-        if (!apiId || !apiHash) {
-            return res.status(400).json({ error: 'apiId and apiHash query params are required' })
-        }
-
         // Ensure the client is alive (re-creates if needed)
-        await tg.getClient(apiId, apiHash)
+        await requireClient(req)
         const dialogs = await tg.getDialogs()
         res.json(dialogs)
     } catch (err) {
@@ -130,12 +164,7 @@ router.get('/dialogs', async (req, res) => {
  */
 router.get('/topics/:chatId', async (req, res) => {
     try {
-        const { apiId, apiHash } = req.query
-        if (!apiId || !apiHash) {
-            return res.status(400).json({ error: 'apiId and apiHash query params are required' })
-        }
-
-        await tg.getClient(apiId, apiHash)
+        await requireClient(req)
         const topics = await tg.getTopics(req.params.chatId)
         res.json(topics)
     } catch (err) {
@@ -150,12 +179,9 @@ router.get('/topics/:chatId', async (req, res) => {
  */
 router.get('/messages/:chatId', async (req, res) => {
     try {
-        const { apiId, apiHash, limit, offsetId, topicId } = req.query
-        if (!apiId || !apiHash) {
-            return res.status(400).json({ error: 'apiId and apiHash query params are required' })
-        }
+        const { limit, offsetId, topicId } = req.query
 
-        await tg.getClient(apiId, apiHash)
+        await requireClient(req)
         const messages = await tg.getMessages(
             req.params.chatId,
             Number(limit) || 50,
@@ -176,12 +202,7 @@ router.get('/messages/:chatId', async (req, res) => {
  */
 router.get('/stream/:chatId/:msgId', async (req, res) => {
     try {
-        const { apiId, apiHash } = req.query
-        if (!apiId || !apiHash) {
-            return res.status(400).json({ error: 'apiId and apiHash query params are required' })
-        }
-
-        await tg.getClient(apiId, apiHash)
+        await requireClient(req)
         await tg.streamMedia(
             req.params.chatId,
             Number(req.params.msgId),

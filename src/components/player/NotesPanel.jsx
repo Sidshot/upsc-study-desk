@@ -11,6 +11,63 @@ import { useNotification } from '../../contexts/NotificationContext'
 
 const MAX_IMAGE_WIDTH = 800
 const MAX_IMAGE_SIZE_BYTES = 2 * 1024 * 1024 // 2MB
+const ALLOWED_NOTE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'S', 'STRIKE', 'UL', 'OL', 'LI', 'P', 'DIV', 'BR', 'IMG'])
+const INLINE_NOTE_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'S', 'STRIKE'])
+
+function sanitizeNoteHTML(html) {
+    if (!html || typeof html !== 'string') return ''
+
+    const template = document.createElement('template')
+    template.innerHTML = html
+
+    const sanitizeNode = (node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return document.createTextNode(node.textContent || '')
+        }
+
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return document.createTextNode('')
+        }
+
+        const tagName = node.tagName.toUpperCase()
+        const children = Array.from(node.childNodes).map(sanitizeNode)
+
+        if (!ALLOWED_NOTE_TAGS.has(tagName)) {
+            const fragment = document.createDocumentFragment()
+            children.forEach(child => fragment.appendChild(child))
+            return fragment
+        }
+
+        if (tagName === 'IMG') {
+            const src = node.getAttribute('src') || ''
+            if (!/^data:image\/(png|jpe?g|gif|webp);base64,/i.test(src)) {
+                return document.createTextNode('')
+            }
+
+            const img = document.createElement('img')
+            img.setAttribute('src', src)
+            img.setAttribute('alt', '')
+            img.setAttribute('loading', 'lazy')
+            return img
+        }
+
+        const element = document.createElement(tagName.toLowerCase())
+        children.forEach(child => element.appendChild(child))
+
+        if (INLINE_NOTE_TAGS.has(tagName)) {
+            return element
+        }
+
+        return element
+    }
+
+    const sanitized = document.createElement('div')
+    Array.from(template.content.childNodes).forEach(node => {
+        sanitized.appendChild(sanitizeNode(node))
+    })
+
+    return sanitized.innerHTML
+}
 
 function resizeImage(file) {
     return new Promise((resolve, reject) => {
@@ -108,7 +165,7 @@ function NoteEditor({ content, onChange, onImageInsert, placeholder = 'Write you
     // Set initial content once
     useEffect(() => {
         if (editorRef.current && !isInitializedRef.current) {
-            editorRef.current.innerHTML = content || ''
+            editorRef.current.innerHTML = sanitizeNoteHTML(content)
             isInitializedRef.current = true
         }
     }, [])
@@ -116,13 +173,17 @@ function NoteEditor({ content, onChange, onImageInsert, placeholder = 'Write you
     // Reset when content changes externally (e.g. editing a different note)
     useEffect(() => {
         if (editorRef.current) {
-            editorRef.current.innerHTML = content || ''
+            editorRef.current.innerHTML = sanitizeNoteHTML(content)
         }
     }, [content])
 
     const handleInput = useCallback(() => {
         if (editorRef.current) {
-            onChange(editorRef.current.innerHTML)
+            const sanitized = sanitizeNoteHTML(editorRef.current.innerHTML)
+            if (editorRef.current.innerHTML !== sanitized) {
+                editorRef.current.innerHTML = sanitized
+            }
+            onChange(sanitized)
         }
     }, [onChange])
 
@@ -150,6 +211,13 @@ function NoteEditor({ content, onChange, onImageInsert, placeholder = 'Write you
                 }
                 return
             }
+        }
+
+        const html = e.clipboardData?.getData('text/html')
+        if (html) {
+            e.preventDefault()
+            execCommand('insertHTML', sanitizeNoteHTML(html))
+            handleInput()
         }
     }
 
@@ -327,7 +395,7 @@ function NotesPanel({
     function copyNote(content) {
         // Strip HTML for clipboard
         const temp = document.createElement('div')
-        temp.innerHTML = content
+        temp.innerHTML = sanitizeNoteHTML(content)
         navigator.clipboard.writeText(temp.textContent || temp.innerText || '')
     }
 
@@ -336,7 +404,7 @@ function NotesPanel({
             const time = formatDuration(note.timestamp)
             // Convert HTML to plain text for export
             const temp = document.createElement('div')
-            temp.innerHTML = note.content
+            temp.innerHTML = sanitizeNoteHTML(note.content)
             const text = temp.textContent || temp.innerText || ''
             // Include image count if any
             const imgCount = (note.images || []).length
@@ -525,7 +593,7 @@ function NotesPanel({
                                     ) : (
                                         <div
                                             className="note-content mt-2 text-sm"
-                                            dangerouslySetInnerHTML={{ __html: note.content }}
+                                            dangerouslySetInnerHTML={{ __html: sanitizeNoteHTML(note.content) }}
                                         />
                                     )}
                                 </div>

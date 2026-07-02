@@ -258,7 +258,7 @@ async function generateAISummary(transcript, apiKey, model, onProgress) {
     onProgress?.({ stage: 'summarizing', progress: 0.1, message: 'Connecting to AI...' })
 
     // Use provided API key (from Settings → API Keys)
-    const OPENROUTER_API_KEY = apiKey || import.meta.env.VITE_OPENROUTER_API_KEY
+    const OPENROUTER_API_KEY = apiKey
 
     if (!OPENROUTER_API_KEY) {
         throw new Error('OpenRouter API key not configured. Go to Settings → API Keys to add it.')
