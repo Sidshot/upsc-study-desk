@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import {
-    X, Upload, Folder, FolderOpen, Video, Clock, AlertTriangle,
+    X, Upload, Folder, FolderOpen, Video, Clock, AlertTriangle, FileText,
     ChevronDown, ChevronRight, Image
 } from 'lucide-react'
 import { formatDuration } from '../../utils/db'
@@ -11,9 +11,17 @@ import { useNotification } from '../../contexts/NotificationContext'
  */
 function countAllVideos(modules) {
     return modules.reduce((sum, m) => {
-        const ownVideos = m.videos?.length || 0
+        const ownVideos = m.videos?.filter(video => video.type !== 'pdf').length || 0
         const childVideos = m.subModules ? countAllVideos(m.subModules) : 0
         return sum + ownVideos + childVideos
+    }, 0)
+}
+
+function countAllResources(modules) {
+    return modules.reduce((sum, m) => {
+        const ownResources = m.videos?.filter(video => video.type === 'pdf').length || 0
+        const childResources = m.subModules ? countAllResources(m.subModules) : 0
+        return sum + ownResources + childResources
     }, 0)
 }
 
@@ -128,6 +136,7 @@ function ImportPreviewModal({
     }
 
     const totalVideos = countAllVideos(modules)
+    const totalResources = countAllResources(modules)
     const totalSubModules = countAllSubModules(modules)
     const totalDuration = sumAllDuration(modules)
 
@@ -141,7 +150,8 @@ function ImportPreviewModal({
         const isExpanded = expandedModules[moduleKey]
         const hasChildren = (module.subModules && module.subModules.length > 0) || (module.videos && module.videos.length > 0)
         const hasSubModules = module.subModules && module.subModules.length > 0
-        const videoCount = module.videos?.length || 0
+        const videoCount = module.videos?.filter(video => video.type !== 'pdf').length || 0
+        const resourceCount = module.videos?.filter(video => video.type === 'pdf').length || 0
         const isSubModule = depth > 0
 
         return (
@@ -190,6 +200,11 @@ function ImportPreviewModal({
                                 {videoCount} video{videoCount !== 1 ? 's' : ''}
                             </span>
                         )}
+                        {resourceCount > 0 && (
+                            <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary px-1.5 py-0.5 bg-light-bg dark:bg-dark-surface rounded">
+                                {resourceCount} note{resourceCount !== 1 ? 's' : ''}
+                            </span>
+                        )}
                     </div>
                 </div>
 
@@ -209,7 +224,11 @@ function ImportPreviewModal({
                                         key={videoIndex}
                                         className="flex items-center gap-2 py-1 pr-3 text-sm"
                                     >
-                                        <Video className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
+                                        {video.type === 'pdf' ? (
+                                            <FileText className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
+                                        ) : (
+                                            <Video className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
+                                        )}
                                         <span className="flex-1 truncate text-light-text-secondary dark:text-dark-text-secondary">
                                             {video.title}
                                         </span>
@@ -345,6 +364,15 @@ function ImportPreviewModal({
                                 video{totalVideos !== 1 ? 's' : ''}
                             </span>
                         </div>
+                        {totalResources > 0 && (
+                            <div className="flex items-center gap-2">
+                                <FileText className="w-5 h-5 text-primary" />
+                                <span className="font-medium">{totalResources}</span>
+                                <span className="text-light-text-secondary dark:text-dark-text-secondary">
+                                    note{totalResources !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        )}
                         <div className="flex items-center gap-2">
                             <Clock className="w-5 h-5 text-primary" />
                             <span className="font-medium">{formatDuration(totalDuration)}</span>

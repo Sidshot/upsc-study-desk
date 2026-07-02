@@ -223,7 +223,7 @@ export async function getDialogs() {
 /**
  * Fetch topics (forums) for a specific chat.
  */
-export async function getTopics(chatId) {
+export async function getTopics(chatId, limit = 500) {
     if (!client) throw new Error('Client not initialised')
 
     let entity
@@ -238,23 +238,40 @@ export async function getTopics(chatId) {
         return []
     }
 
-    const result = await client.invoke(
-        new Api.channels.GetForumTopics({
-            channel: entity,
-            offsetDate: 0,
-            offsetId: 0,
-            offsetTopic: 0,
-            limit: 100,
-        })
-    )
-
     const topics = []
-    for (const topic of result.topics) {
-        topics.push({
-            id: topic.id,
-            title: topic.title,
-            date: topic.date,
-        })
+    let offsetDate = 0
+    let offsetId = 0
+    let offsetTopic = 0
+    const pageSize = Math.min(100, Math.max(1, Number(limit) || 100))
+
+    while (topics.length < limit) {
+        const result = await client.invoke(
+            new Api.channels.GetForumTopics({
+                channel: entity,
+                offsetDate,
+                offsetId,
+                offsetTopic,
+                limit: Math.min(pageSize, limit - topics.length),
+            })
+        )
+
+        const page = result.topics || []
+        if (page.length === 0) break
+
+        for (const topic of page) {
+            topics.push({
+                id: topic.id,
+                title: topic.title,
+                date: topic.date,
+            })
+        }
+
+        const lastTopic = page[page.length - 1]
+        offsetDate = lastTopic.date || 0
+        offsetId = lastTopic.topMessage || lastTopic.id || 0
+        offsetTopic = lastTopic.id || 0
+
+        if (page.length < pageSize) break
     }
 
     return topics
@@ -268,7 +285,7 @@ export async function getTopics(chatId) {
  * @param {number} offsetId - Telegram message-id offset for pagination
  * @param {number|null} topicId - Optional topic ID for forums
  */
-export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = null) {
+export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = null, options = {}) {
     if (!client) throw new Error('Client not initialised')
 
     // Resolve the chatId string to a proper InputPeer entity
@@ -332,9 +349,10 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
             fileName = isPdf ? `Document_${doc.id}.pdf` : `Video_${doc.id}.mp4`
         }
 
-        // Optionally grab the smallest thumbnail as base64
+        // Optionally grab the smallest thumbnail as base64. Bulk scan keeps this off
+        // because thumbnail downloads turn hundreds of metadata rows into hundreds of media requests.
         let thumbnail = null
-        if (doc.thumbs && doc.thumbs.length > 0) {
+        if (options.includeThumbnails !== false && doc.thumbs && doc.thumbs.length > 0) {
             try {
                 const thumb = doc.thumbs[0] // smallest first
                 const thumbBuf = await client.downloadMedia(msg.media, {
@@ -358,11 +376,52 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
             size: doc.size?.toString() || '0',
             duration,
             thumbnail,
+            chatId,
+            topicId,
         })
     }
 
     console.log(`[Telegram] Chat ${chatId}: ${videos.length} videos (scanned ${messages.length} msgs)`)
     return videos
+}
+
+export async function scanMessages(chatId, options = {}) {
+    const maxMessages = Math.min(Math.max(Number(options.maxMessages) || 500, 1), 5000)
+    const batchSize = Math.min(Math.max(Number(options.batchSize) || 100, 1), 200)
+    const topicIds = Array.isArray(options.topicIds) && options.topicIds.length > 0
+        ? options.topicIds
+        : [null]
+    const collected = []
+
+    for (const topicId of topicIds) {
+        let offsetId = 0
+        const topicLimit = Math.max(1, Math.ceil(maxMessages / topicIds.length))
+
+        while (collected.filter(item => String(item.topicId || '') === String(topicId || '')).length < topicLimit) {
+            const remainingForTopic = topicLimit - collected.filter(item => String(item.topicId || '') === String(topicId || '')).length
+            const batch = await getMessages(
+                chatId,
+                Math.min(batchSize, remainingForTopic),
+                offsetId,
+                topicId,
+                { includeThumbnails: false }
+            )
+
+            if (batch.length === 0) break
+
+            collected.push(...batch.map(item => ({ ...item, chatId, topicId })))
+            offsetId = Math.min(...batch.map(item => Number(item.id)).filter(Boolean))
+
+            if (batch.length < Math.min(batchSize, remainingForTopic) || !offsetId) break
+        }
+    }
+
+    const unique = new Map()
+    for (const item of collected) {
+        unique.set(`${item.chatId}:${item.topicId || 'main'}:${item.id}`, item)
+    }
+
+    return Array.from(unique.values()).sort((a, b) => b.date - a.date)
 }
 
 /**

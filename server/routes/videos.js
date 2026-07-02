@@ -137,6 +137,7 @@ router.put('/:id', (req, res) => {
             description: 'description',
             fileName: 'file_name',
             filePath: 'file_path',
+            fileSize: 'file_size',
             duration: 'duration',
             thumbnailData: 'thumbnail_data',
             order: '"order"',
@@ -150,7 +151,8 @@ router.put('/:id', (req, res) => {
             completedAt: 'completed_at',
             watchCount: 'watch_count',
             youtubeId: 'youtube_id',
-            url: 'url'
+            url: 'url',
+            type: 'type'
         }
 
         for (const [key, dbField] of Object.entries(fieldMap)) {

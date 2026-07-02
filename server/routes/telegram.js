@@ -9,6 +9,7 @@
 import express from 'express'
 import * as tg from '../services/telegramClient.js'
 import { getOne } from '../database.js'
+import { buildTelegramCourseStructure } from '../services/telegramCourseParser.js'
 
 const router = express.Router()
 
@@ -191,6 +192,70 @@ router.get('/messages/:chatId', async (req, res) => {
         res.json(messages)
     } catch (err) {
         console.error('[Telegram] /messages error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * POST /analyze
+ * Body: { chatId, chatTitle, topicId, topicTitle, messages }
+ * Converts already-loaded Telegram media rows into the normal course import structure.
+ */
+router.post('/analyze', async (req, res) => {
+    try {
+        const { chatId, chatTitle, topicId, topicTitle, messages } = req.body || {}
+        if (!chatId || !Array.isArray(messages)) {
+            return res.status(400).json({ error: 'chatId and messages are required' })
+        }
+
+        const course = buildTelegramCourseStructure({
+            chatId,
+            chatTitle,
+            topicTitle,
+            topics: topicId ? [{ id: topicId, title: topicTitle }] : [],
+            messages: messages.map(msg => ({ ...msg, chatId, topicId: topicId || msg.topicId || null })),
+        })
+
+        res.json({ course })
+    } catch (err) {
+        console.error('[Telegram] /analyze error:', err.message)
+        res.status(500).json({ error: err.message })
+    }
+})
+
+/**
+ * POST /scan-preview
+ * Body: { chatId, chatTitle, topics, maxMessages }
+ * Bulk-scans Telegram metadata and returns an import-ready smart course preview.
+ */
+router.post('/scan-preview', async (req, res) => {
+    try {
+        const { chatId, chatTitle, topics = [], maxMessages = 500 } = req.body || {}
+        if (!chatId) {
+            return res.status(400).json({ error: 'chatId is required' })
+        }
+
+        await requireClient(req)
+        const topicIds = Array.isArray(topics) && topics.length > 0
+            ? topics.map(topic => topic.id)
+            : []
+        const messages = await tg.scanMessages(chatId, { topicIds, maxMessages })
+        const topicTitle = topics.length === 1 ? topics[0].title : null
+        const course = buildTelegramCourseStructure({
+            chatId,
+            chatTitle,
+            topicTitle,
+            topics,
+            messages,
+        })
+
+        res.json({
+            course,
+            scanned: messages.length,
+            maxMessages: Number(maxMessages) || 500,
+        })
+    } catch (err) {
+        console.error('[Telegram] /scan-preview error:', err.message)
         res.status(500).json({ error: err.message })
     }
 })

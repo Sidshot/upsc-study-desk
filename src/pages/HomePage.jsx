@@ -173,8 +173,10 @@ function HomePage() {
                             fileName: video.fileName,
                             relativePath: video.relativePath,
                             filePath: video.filePath,
+                            fileSize: video.fileSize,
                             url: video.url,
                             duration: video.duration,
+                            type: video.type || 'video',
                             order: j,
                             fileHandle: video.fileHandle
                         })

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { X, Send, Loader, AlertTriangle, Search, ChevronLeft, Check, Users, Radio, Film, Calendar, HardDrive } from 'lucide-react'
+import { X, Send, Loader, AlertTriangle, Search, ChevronLeft, Check, Users, Radio, Film, Calendar, HardDrive, Wand2 } from 'lucide-react'
 import * as api from '../../utils/api'
 
 function formatFileSize(bytes) {
@@ -42,6 +42,8 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     const [topics, setTopics] = useState([])
     const [selectedTopic, setSelectedTopic] = useState(null)
     const [topicFilter, setTopicFilter] = useState('')
+    const [isSmartScanning, setIsSmartScanning] = useState(false)
+    const [smartScanLimit, setSmartScanLimit] = useState(500)
 
     const apiId = settings?.telegramApiId
     const apiHash = settings?.telegramApiHash
@@ -79,6 +81,8 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         setTopics([])
         setSelectedTopic(null)
         setTopicFilter('')
+        setIsSmartScanning(false)
+        setSmartScanLimit(500)
 
         if (!apiId || !apiHash) return
 
@@ -243,21 +247,64 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
         }
     }
 
-    function handleImportSelected() {
+    function withServerUrls(course) {
+        function normalizeModule(module) {
+            return {
+                ...module,
+                videos: (module.videos || []).map(video => ({
+                    ...video,
+                    url: video.url?.startsWith('/api/') ? `${api.SERVER_URL}${video.url}` : video.url
+                })),
+                subModules: (module.subModules || []).map(normalizeModule)
+            }
+        }
+
+        return {
+            ...course,
+            modules: (course.modules || []).map(normalizeModule)
+        }
+    }
+
+    async function handleSmartScan(scanTopics = null) {
+        if (!selectedChannel) return
+        setIsSmartScanning(true)
+        setError('')
+        try {
+            const chosenTopics = scanTopics || (selectedTopic ? [selectedTopic] : [])
+            const data = await api.post('/api/telegram/scan-preview', {
+                chatId: selectedChannel.id,
+                chatTitle: selectedChannel.title,
+                topics: chosenTopics,
+                maxMessages: smartScanLimit
+            })
+            onImport(withServerUrls(data.course))
+        } catch (err) {
+            setError('Smart scan failed: ' + err.message)
+        } finally {
+            setIsSmartScanning(false)
+        }
+    }
+
+    async function handleImportSelected() {
         const selected = messages.filter(m => selectedVideos.has(m.id))
-        onImport({
-            title: selectedChannel.title,
-            source: 'telegram',
-            modules: [{
-                title: selectedTopic ? selectedTopic.title : selectedChannel.title,
-                videos: selected.map(msg => ({
-                    title: msg.fileName || `Media ${msg.id}`,
-                    url: `${api.SERVER_URL}/api/telegram/stream/${encodeURIComponent(selectedChannel.id)}/${encodeURIComponent(msg.id)}`,
-                    duration: msg.duration || 0,
-                    type: msg.type || 'video',
-                }))
-            }]
-        })
+        if (selected.length === 0) return
+
+        setIsSmartScanning(true)
+        setError('')
+        try {
+            const data = await api.post('/api/telegram/analyze', {
+                chatId: selectedChannel.id,
+                chatTitle: selectedChannel.title,
+                topicId: selectedTopic?.id,
+                topicTitle: selectedTopic?.title,
+                messages: selected
+            })
+            onImport(withServerUrls(data.course))
+        } catch (err) {
+            setError('Smart arrange failed: ' + err.message)
+        } finally {
+            setIsSmartScanning(false)
+        }
     }
 
     const filteredChannels = channels.filter(ch =>
@@ -513,6 +560,43 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
                             {!isLoading && (
                                 <div className="max-h-80 overflow-y-auto -mx-2 px-2 space-y-1">
+                                    {topics.length > 0 && (
+                                        <div className="mx-2 mb-2 flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                                            <div>
+                                                <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan depth</div>
+                                                <div className="text-xs text-gray-500 dark:text-neutral-500">Higher scans catch more lectures but take longer.</div>
+                                            </div>
+                                            <select
+                                                value={smartScanLimit}
+                                                onChange={(e) => setSmartScanLimit(Number(e.target.value))}
+                                                className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                                            >
+                                                <option value={100}>100</option>
+                                                <option value={500}>500</option>
+                                                <option value={1000}>1000</option>
+                                                <option value={2000}>2000</option>
+                                            </select>
+                                        </div>
+                                    )}
+                                    {topics.length > 0 && (
+                                        <button
+                                            onClick={() => handleSmartScan(topics)}
+                                            disabled={isSmartScanning}
+                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-left disabled:opacity-60"
+                                        >
+                                            <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0">
+                                                {isSmartScanning ? <Loader className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="font-semibold text-sm text-blue-700 dark:text-blue-300">
+                                                    Smart scan all topics
+                                                </div>
+                                                <div className="text-xs text-blue-600/80 dark:text-blue-300/80">
+                                                    Build a course preview from up to {smartScanLimit} Telegram media files.
+                                                </div>
+                                            </div>
+                                        </button>
+                                    )}
                                     {topics.filter(t => t.title?.toLowerCase().includes(topicFilter.toLowerCase())).map((topic) => (
                                         <button
                                             key={topic.id}
@@ -552,6 +636,31 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
 
                             {!isLoading && messages.length > 0 && (
                                 <>
+                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 dark:border-white/10 p-3">
+                                        <div>
+                                            <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan depth</div>
+                                            <div className="text-xs text-gray-500 dark:text-neutral-500">Use loaded files manually, or scan deeper from Telegram.</div>
+                                        </div>
+                                        <select
+                                            value={smartScanLimit}
+                                            onChange={(e) => setSmartScanLimit(Number(e.target.value))}
+                                            className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                                        >
+                                            <option value={100}>100</option>
+                                            <option value={500}>500</option>
+                                            <option value={1000}>1000</option>
+                                            <option value={2000}>2000</option>
+                                        </select>
+                                    </div>
+                                    <button
+                                        onClick={() => handleSmartScan()}
+                                        disabled={isSmartScanning}
+                                        className="w-full p-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                    >
+                                        {isSmartScanning ? <Loader className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                        Smart Scan & Arrange {selectedTopic ? 'This Topic' : 'This Channel'}
+                                    </button>
+
                                     {/* Select All */}
                                     <div className="flex items-center justify-between py-2">
                                         <button
@@ -634,11 +743,11 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                     {/* Import Button */}
                                     <button
                                         onClick={handleImportSelected}
-                                        disabled={selectedVideos.size === 0}
+                                        disabled={selectedVideos.size === 0 || isSmartScanning}
                                         className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:hover:bg-blue-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 mt-2"
                                     >
-                                        <Send className="w-4 h-4" />
-                                        Import {selectedVideos.size > 0 ? `${selectedVideos.size} File${selectedVideos.size > 1 ? 's' : ''}` : 'Selected'}
+                                        {isSmartScanning ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                        Arrange & Import {selectedVideos.size > 0 ? `${selectedVideos.size} File${selectedVideos.size > 1 ? 's' : ''}` : 'Selected'}
                                     </button>
                                 </>
                             )}
