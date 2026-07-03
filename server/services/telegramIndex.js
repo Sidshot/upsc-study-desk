@@ -1,4 +1,4 @@
-import { getAll, getOne, run, transaction } from '../database.js'
+import { getAll, getOne, run, runInTransaction, transaction } from '../database.js'
 
 function nowIso() {
     return new Date().toISOString()
@@ -65,10 +65,10 @@ export function saveParseRules(chatId, rules) {
     return cleanRules
 }
 
-export function upsertSource(source) {
+export function upsertSource(source, writer = run) {
     if (!source?.chatId && !source?.id) return
     const chatId = String(source.chatId || source.id)
-    run(`
+    writer(`
         INSERT INTO telegram_sources (
             chat_id, title, is_forum, access_hash, last_scanned_at, custom_metadata
         ) VALUES (?, ?, ?, ?, ?, ?)
@@ -97,13 +97,13 @@ export function upsertMediaBatch({ chatId, chatTitle, topics = [], messages = []
     const indexedAt = nowIso()
 
     transaction(() => {
-        upsertSource({ chatId, title: chatTitle || 'Telegram Source', isForum: topics.length > 0 })
+        upsertSource({ chatId, title: chatTitle || 'Telegram Source', isForum: topics.length > 0 }, runInTransaction)
 
         for (const msg of messages) {
             const topicId = normalizeTopicId(msg.topicId)
             const id = mediaIndexId(chatId, topicId, msg.id)
             const fileSize = Number(msg.size || msg.fileSize || 0)
-            run(`
+            runInTransaction(`
                 INSERT INTO telegram_media_index (
                     id, chat_id, topic_id, topic_title, message_id, message_date,
                     file_name, mime_type, media_type, file_size, duration, caption,
@@ -140,7 +140,7 @@ export function upsertMediaBatch({ chatId, chatTitle, topics = [], messages = []
 
         const latestMessageId = Math.max(...messages.map(msg => Number(msg.id) || 0))
         const mediaCount = countCachedMedia(chatId)
-        run(`
+        runInTransaction(`
             UPDATE telegram_sources
             SET last_message_id = MAX(COALESCE(last_message_id, 0), ?),
                 media_count = ?,

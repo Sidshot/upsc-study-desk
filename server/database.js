@@ -180,6 +180,14 @@ export function run(sql, params = []) {
 }
 
 /**
+ * Run a write query without scheduling an immediate save.
+ * Use only inside transaction() blocks so the final commit saves once.
+ */
+export function runInTransaction(sql, params = []) {
+    db.run(sql, params)
+}
+
+/**
  * Get a single row
  */
 export function getOne(sql, params = []) {
