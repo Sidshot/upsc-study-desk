@@ -1,9 +1,8 @@
-import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
     ChevronDown, ChevronRight, ChevronLeft, Check,
-    Pencil, GripVertical, Folder, FolderOpen
+    Pencil, GripVertical, Folder, FolderOpen,
+    Play, FileText, Headphones, PictureInPicture
 } from 'lucide-react'
-import { formatDuration, markVideoComplete, updateModule, updateVideo } from '../../utils/db'
 import EditModuleModal from './EditModuleModal'
 import NotesPanel from './NotesPanel'
 import BulkEditPlaylist from './BulkEditPlaylist'
@@ -277,49 +276,79 @@ function PlaylistSidebar({
                                 const isActive = currentVideo?.id === video.id
                                 const isCompleted = video.isCompleted
 
+                                const isLecture = isLectureItem(video)
+                                const thumbnailIcon = isLecture ? (
+                                    <Play className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                ) : video.type === 'image' ? (
+                                    <PictureInPicture className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                ) : video.type === 'audio' ? (
+                                    <Headphones className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                ) : (
+                                    <FileText className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                                )
+
                                 return (
                                     <div
                                         key={video.id}
                                         onClick={() => onVideoSelect(video)}
                                         className={`
-                                            w-full flex items-start gap-3 py-2 text-left cursor-pointer
-                                            transition-colors group text-sm
+                                            w-full flex items-start gap-3 py-2.5 text-left cursor-pointer
+                                            transition-colors group text-sm relative
                                             ${isActive
-                                                ? 'bg-primary-fg/10 dark:bg-primary-fg/10 border-l-2 border-blue-600 dark:border-primary-fg'
+                                                ? 'bg-primary-fg/5 dark:bg-primary-fg/10 border-l-2 border-blue-600 dark:border-primary-fg'
                                                 : 'hover:bg-light-surface dark:hover:bg-dark-bg border-l-2 border-transparent'
                                             }
                                         `}
                                         style={{ paddingLeft: `${28 + depth * 16}px`, paddingRight: '16px' }}
                                     >
-                                        {/* Checkbox */}
-                                        <button
-                                            onClick={(e) => handleToggleComplete(e, video)}
-                                            className={`
-                                                w-4 h-4 rounded border flex-shrink-0 mt-0.5
-                                                flex items-center justify-center transition-colors
-                                                ${isCompleted
-                                                    ? 'bg-success border-success text-white'
-                                                    : 'border-gray-400 dark:border-gray-600 hover:border-primary'
-                                                }
-                                            `}
-                                        >
-                                            {isCompleted && <Check className="w-3 h-3" />}
-                                        </button>
-
-                                        {/* Title */}
-                                        <div className="flex-1 min-w-0">
-                                            <div className={`line-clamp-2 ${isCompleted ? 'text-light-text-secondary dark:text-dark-text-secondary line-through' : ''} ${isActive ? 'text-primary-fg font-medium' : ''}`}>
-                                                {video.title}
-                                            </div>
-                                            {isLectureItem(video) ? (
-                                                <div className="flex items-center gap-2 mt-0.5 text-xs text-light-text-secondary dark:text-dark-text-secondary">
-                                                    <span>{formatDuration(video.duration)}</span>
-                                                </div>
-                                            ) : (
-                                                <div className="flex items-center gap-2 mt-0.5 text-xs text-light-text-secondary dark:text-dark-text-secondary">
-                                                    <span>{video.type === 'image' ? 'Image' : video.type === 'audio' ? 'Audio' : video.type === 'document' ? 'Document' : 'Resource'}</span>
+                                        {/* Thumbnail Container */}
+                                        <div className="relative w-28 h-16 sm:w-32 sm:h-[72px] flex-shrink-0 bg-gray-200 dark:bg-[#1a1a1a] rounded-lg overflow-hidden flex items-center justify-center border border-light-border dark:border-dark-border">
+                                            {thumbnailIcon}
+                                            
+                                            {/* Duration overlay (bottom right) */}
+                                            {isLecture && (
+                                                <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-medium px-1.5 py-0.5 rounded">
+                                                    {formatDuration(video.duration)}
                                                 </div>
                                             )}
+                                            {!isLecture && (
+                                                <div className="absolute bottom-1 right-1 bg-black/80 text-white text-[10px] font-medium px-1.5 py-0.5 rounded capitalize">
+                                                    {video.type || 'resource'}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Details Container */}
+                                        <div className="flex-1 min-w-0 flex flex-col pt-0.5">
+                                            <div className="flex items-start justify-between gap-2">
+                                                <div 
+                                                    className={`line-clamp-2 font-medium leading-tight ${
+                                                        isCompleted ? 'text-light-text-secondary dark:text-dark-text-secondary line-through' : ''
+                                                    } ${isActive ? 'text-primary-fg' : 'text-light-text-primary dark:text-dark-text-primary'}`}
+                                                    title={video.title}
+                                                >
+                                                    {video.title}
+                                                </div>
+                                                
+                                                {/* Checkbox moved to top right of details */}
+                                                <button
+                                                    onClick={(e) => handleToggleComplete(e, video)}
+                                                    className={`
+                                                        w-4 h-4 rounded border flex-shrink-0
+                                                        flex items-center justify-center transition-colors
+                                                        ${isCompleted
+                                                            ? 'bg-success border-success text-white'
+                                                            : 'border-gray-400 dark:border-gray-600 hover:border-primary'
+                                                        }
+                                                    `}
+                                                >
+                                                    {isCompleted && <Check className="w-3 h-3" />}
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="mt-1 text-[11px] text-light-text-secondary dark:text-dark-text-secondary">
+                                                {isLecture ? 'Lecture' : 'Resource'}
+                                            </div>
                                         </div>
                                     </div>
                                 )
