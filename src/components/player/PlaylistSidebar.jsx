@@ -122,6 +122,19 @@ function PlaylistSidebar({
         }
     }, [])
 
+    // Auto-scroll to active video
+    useEffect(() => {
+        if (currentVideo?.id && activeTab === 'playlist') {
+            // Small timeout to allow render/expansion
+            setTimeout(() => {
+                const activeEl = document.getElementById(`playlist-item-${currentVideo.id}`)
+                if (activeEl) {
+                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                }
+            }, 150)
+        }
+    }, [currentVideo?.id, activeTab])
+
     function toggleModule(moduleId) {
         setExpandedModules(prev => ({
             ...prev,
@@ -290,6 +303,7 @@ function PlaylistSidebar({
                                 return (
                                     <div
                                         key={video.id}
+                                        id={`playlist-item-${video.id}`}
                                         onClick={() => onVideoSelect(video)}
                                         className={`
                                             w-full flex items-start gap-3 py-2.5 text-left cursor-pointer
