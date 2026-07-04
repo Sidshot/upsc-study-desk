@@ -186,13 +186,24 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                     </span>
                 </div>
 
-                {/* Edit/Delete Buttons for List View */}
+                {/* Action Buttons for List View */}
                 <button
                     onClick={handleEdit}
                     className="omni-action !rounded-full !p-2 text-gray-500 dark:text-neutral-400"
                     title="Edit course metadata and progress"
                 >
                     <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                    onClick={(e) => {
+                        if (telegramSource) handleSourceUpdate(e, telegramSource)
+                        else handleSync(e)
+                    }}
+                    disabled={isSyncing}
+                    className="omni-action !rounded-full !p-2 text-sky-700 dark:text-sky-300"
+                    title="Update course"
+                >
+                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
                 </button>
                 <button
                     onClick={handleDelete}
@@ -202,15 +213,6 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                 >
                     <Trash2 className="w-4 h-4" />
                 </button>
-                {telegramSource && (
-                    <button
-                        onClick={(e) => handleSourceUpdate(e, telegramSource)}
-                        className="omni-action !rounded-full !p-2 text-sky-700 dark:text-sky-300"
-                        title="Check Telegram for new material"
-                    >
-                        <RefreshCw className="w-4 h-4" />
-                    </button>
-                )}
             </CardWrapper>
         )
     }
@@ -290,32 +292,25 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                                         <Pencil className="w-3 h-3" />
                                         Edit
                                     </button>
-                                    {isLocalCourse && (
-                                        <button
-                                            className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
-                                            onClick={handleSync}
-                                            disabled={isSyncing}
-                                        >
-                                            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                                            {isSyncing ? 'Scanning...' : 'Sync'}
-                                        </button>
-                                    )}
-                                    {telegramSource && (
-                                        <button
-                                            className="w-full px-3 py-2 text-left text-sm text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-500/10 flex items-center gap-2"
-                                            onClick={(e) => handleSourceUpdate(e, telegramSource)}
-                                        >
-                                            <RefreshCw className="w-3 h-3" />
-                                            Update Telegram
-                                        </button>
-                                    )}
+                                    <button
+                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                        onClick={(e) => {
+                                            if (telegramSource) handleSourceUpdate(e, telegramSource)
+                                            else handleSync(e)
+                                        }}
+                                        disabled={isSyncing}
+                                    >
+                                        <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                                        Update
+                                    </button>
                                     <button
                                         className="w-full px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
                                         onClick={handleDelete}
                                         disabled={isDeleting}
                                     >
                                         <Trash2 className="w-3 h-3" />
-                                        {isDeleting ? 'Deleting...' : 'Delete'}                                    </button>
+                                        {isDeleting ? 'Deleting...' : 'Delete'}
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -350,24 +345,15 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                         </div>
                     )}
 
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                        {telegramSource && (
-                        <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
-                            <Radio className="h-3 w-3" />
-                            <span>{sourceHealthLabel || 'telegram source'}</span>
-                            {sourceTime && <span className="text-sky-700/70 dark:text-sky-200/70">updated {new Date(sourceTime).toLocaleDateString()}</span>}
+                    {telegramSource && (
+                        <div className="mb-3 flex flex-wrap items-center gap-2">
+                            <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+                                <Radio className="h-3 w-3" />
+                                <span>{sourceHealthLabel || 'telegram source'}</span>
+                                {sourceTime && <span className="text-sky-700/70 dark:text-sky-200/70">updated {new Date(sourceTime).toLocaleDateString()}</span>}
+                            </div>
                         </div>
-                        )}
-                        <button
-                            onClick={handleDelete}
-                            disabled={isDeleting}
-                            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
-                            title="Delete course"
-                        >
-                            <Trash2 className="h-3 w-3" />
-                            {isDeleting ? 'Deleting' : 'Delete'}
-                        </button>
-                    </div>
+                    )}
 
                     {/* Progress Bar */}
                     <div className="progress-bar mb-3 h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
