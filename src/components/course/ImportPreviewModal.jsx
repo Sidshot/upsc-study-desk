@@ -11,7 +11,7 @@ import { useNotification } from '../../contexts/NotificationContext'
  */
 function countAllVideos(modules) {
     return modules.reduce((sum, m) => {
-        const ownVideos = m.videos?.filter(video => video.type !== 'pdf').length || 0
+        const ownVideos = m.videos?.filter(video => !['pdf', 'image', 'audio', 'document', 'other'].includes(video.type)).length || 0
         const childVideos = m.subModules ? countAllVideos(m.subModules) : 0
         return sum + ownVideos + childVideos
     }, 0)
@@ -19,7 +19,7 @@ function countAllVideos(modules) {
 
 function countAllResources(modules) {
     return modules.reduce((sum, m) => {
-        const ownResources = m.videos?.filter(video => video.type === 'pdf').length || 0
+        const ownResources = m.videos?.filter(video => ['pdf', 'image', 'audio', 'document', 'other'].includes(video.type)).length || 0
         const childResources = m.subModules ? countAllResources(m.subModules) : 0
         return sum + ownResources + childResources
     }, 0)
@@ -150,8 +150,8 @@ function ImportPreviewModal({
         const isExpanded = expandedModules[moduleKey]
         const hasChildren = (module.subModules && module.subModules.length > 0) || (module.videos && module.videos.length > 0)
         const hasSubModules = module.subModules && module.subModules.length > 0
-        const videoCount = module.videos?.filter(video => video.type !== 'pdf').length || 0
-        const resourceCount = module.videos?.filter(video => video.type === 'pdf').length || 0
+        const videoCount = module.videos?.filter(video => !['pdf', 'image', 'audio', 'document', 'other'].includes(video.type)).length || 0
+        const resourceCount = module.videos?.filter(video => ['pdf', 'image', 'audio', 'document', 'other'].includes(video.type)).length || 0
         const isSubModule = depth > 0
 
         return (
@@ -202,7 +202,7 @@ function ImportPreviewModal({
                         )}
                         {resourceCount > 0 && (
                             <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary px-1.5 py-0.5 bg-light-bg dark:bg-dark-surface rounded">
-                                {resourceCount} note{resourceCount !== 1 ? 's' : ''}
+                                {resourceCount} resource{resourceCount !== 1 ? 's' : ''}
                             </span>
                         )}
                     </div>
@@ -224,7 +224,9 @@ function ImportPreviewModal({
                                         key={videoIndex}
                                         className="flex items-center gap-2 py-1 pr-3 text-sm"
                                     >
-                                        {video.type === 'pdf' ? (
+                                        {video.type === 'image' ? (
+                                            <Image className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
+                                        ) : ['pdf', 'audio', 'document', 'other'].includes(video.type) ? (
                                             <FileText className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
                                         ) : (
                                             <Video className="w-3 h-3 text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0" />
@@ -232,9 +234,11 @@ function ImportPreviewModal({
                                         <span className="flex-1 truncate text-light-text-secondary dark:text-dark-text-secondary">
                                             {video.title}
                                         </span>
-                                        <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0">
-                                            {formatDuration(video.duration)}
-                                        </span>
+                                        {!['pdf', 'image', 'audio', 'document', 'other'].includes(video.type) && (
+                                            <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary flex-shrink-0">
+                                                {formatDuration(video.duration)}
+                                            </span>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -369,7 +373,7 @@ function ImportPreviewModal({
                                 <FileText className="w-5 h-5 text-primary" />
                                 <span className="font-medium">{totalResources}</span>
                                 <span className="text-light-text-secondary dark:text-dark-text-secondary">
-                                    note{totalResources !== 1 ? 's' : ''}
+                                    resource{totalResources !== 1 ? 's' : ''}
                                 </span>
                             </div>
                         )}

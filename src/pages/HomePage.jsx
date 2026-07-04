@@ -10,7 +10,9 @@ import LoadingSpinner from '../components/common/LoadingSpinner'
 import ImportPreviewModal from '../components/course/ImportPreviewModal'
 import EditCourseModal from '../components/course/EditCourseModal'
 import SyncPreviewModal from '../components/course/SyncPreviewModal'
+import SourceUpdateModal from '../components/course/SourceUpdateModal'
 import { getDriveVideoUrl } from '../utils/googleDrive'
+import { getSourceCourseMap } from '../utils/sources'
 import { 
     syncCoursePreview, applySyncChanges, pickFolder, scanCourseFolder 
 } from '../utils/fileSystem'
@@ -23,6 +25,8 @@ function HomePage() {
     const [editingCourse, setEditingCourse] = useState(null)
     const [syncPreview, setSyncPreview] = useState(null)
     const [isApplyingSync, setIsApplyingSync] = useState(false)
+    const [sourceMap, setSourceMap] = useState({})
+    const [sourceUpdateTarget, setSourceUpdateTarget] = useState(null)
     const { settings, updateSettings } = useSettings()
     const { searchQuery, setSearchQuery } = useSearch()
     const { showNotification } = useNotification()
@@ -59,8 +63,12 @@ function HomePage() {
     async function loadCourses() {
         try {
             setIsLoading(true)
-            const allCourses = await getAllCourses()
+            const [allCourses, linkedSources] = await Promise.all([
+                getAllCourses(),
+                getSourceCourseMap().catch(() => ({})),
+            ])
             setCourses(allCourses)
+            setSourceMap(linkedSources || {})
         } catch (err) {
             console.error('Failed to load courses:', err)
         } finally {
@@ -170,6 +178,7 @@ function HomePage() {
                             moduleId: savedModule.id,
                             title: video.title,
                             originalTitle: video.originalTitle,
+                            description: video.description,
                             fileName: video.fileName,
                             relativePath: video.relativePath,
                             filePath: video.filePath,
@@ -178,7 +187,11 @@ function HomePage() {
                             duration: video.duration,
                             type: video.type || 'video',
                             order: j,
-                            fileHandle: video.fileHandle
+                            fileHandle: video.fileHandle,
+                            sourceMetadata: video.telegram ? {
+                                sourceType: 'telegram',
+                                telegram: video.telegram,
+                            } : video.sourceMetadata
                         })
                     }
 
@@ -470,12 +483,12 @@ function HomePage() {
     return (
         <div className="container mx-auto px-4 py-8">
             {/* Premium Welcome Banner */}
-            <div className="mb-10 p-8 sm:p-10 rounded-3xl bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800 text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-600 rounded-full mix-blend-screen filter blur-[100px] opacity-10 -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-purple-600 rounded-full mix-blend-screen filter blur-[100px] opacity-10 translate-y-1/2 -translate-x-1/4"></div>
+            <div className="mb-10 p-8 sm:p-10 rounded-3xl bg-[#fff4d3] dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 border border-amber-200 dark:border-neutral-800 text-stone-950 dark:text-white shadow-xl dark:shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 -translate-y-1/2 translate-x-1/2"></div>
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-200 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 translate-y-1/2 -translate-x-1/4"></div>
                 <div className="relative z-10">
-                    <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight text-white">Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-400">MyStudy</span></h1>
-                    <p className="text-neutral-400 text-lg max-w-xl font-light">Your premium academic workspace. Focus, learn, and master your materials.</p>
+                    <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight text-stone-950 dark:text-white">Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-800 to-stone-950 dark:from-blue-400 dark:to-purple-400">Omni</span></h1>
+                    <p className="text-stone-600 dark:text-neutral-400 text-lg max-w-xl font-light">Your academic workspace for courses, notes, lectures, and source-powered updates.</p>
                 </div>
             </div>
 
@@ -570,26 +583,28 @@ function HomePage() {
                         <CourseCard
                             key={course.id}
                             course={course}
+                            sources={sourceMap[course.id] || []}
                             viewMode={viewMode}
                             onRefresh={loadCourses}
                             onEdit={() => setEditingCourse(course)}
                             onSync={handleSyncCourse}
+                            onSourceUpdate={(source) => setSourceUpdateTarget({ course, source })}
                         />
                     ))}
                 </div>
             ) : courses.length === 0 ? (
                 <div className="text-center py-16">
                     <FolderOpen className="w-16 h-16 mx-auto mb-4 text-neutral-500 opacity-50" />
-                    <h2 className="text-xl font-semibold mb-2 text-white">No papers yet</h2>
-                    <p className="text-neutral-400 mb-6">
+                    <h2 className="text-xl font-semibold mb-2 text-stone-900 dark:text-white">No courses yet</h2>
+                    <p className="text-stone-600 dark:text-neutral-400 mb-6">
                         Click "Add Paper" in the header to get started
                     </p>
                 </div>
             ) : (
                 <div className="text-center py-16">
                     <Search className="w-16 h-16 mx-auto mb-4 text-neutral-500 opacity-50" />
-                    <h2 className="text-xl font-semibold mb-2 text-white">No results found</h2>
-                    <p className="text-neutral-400 mb-6">
+                    <h2 className="text-xl font-semibold mb-2 text-stone-900 dark:text-white">No results found</h2>
+                    <p className="text-stone-600 dark:text-neutral-400 mb-6">
                         Try adjusting your search or filters
                     </p>
                     <button
@@ -627,6 +642,14 @@ function HomePage() {
                 onConfirm={handleConfirmSync}
                 onCancel={() => setSyncPreview(null)}
                 isApplying={isApplyingSync}
+            />
+
+            <SourceUpdateModal
+                isOpen={!!sourceUpdateTarget}
+                source={sourceUpdateTarget?.source}
+                course={sourceUpdateTarget?.course}
+                onClose={() => setSourceUpdateTarget(null)}
+                onImported={loadCourses}
             />
         </div>
     )

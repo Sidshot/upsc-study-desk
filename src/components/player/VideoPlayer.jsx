@@ -16,6 +16,67 @@ import TranslateModal from './TranslateModal'
 import mpegts from 'mpegts.js'
 import PDFViewer from './PDFViewer'
 
+function isDocumentLike(type) {
+    return ['pdf', 'image', 'audio', 'document', 'other'].includes(type)
+}
+
+function NonVideoResourceViewer({ video, fileUrl, onReady }) {
+    useEffect(() => {
+        onReady?.()
+    }, [video?.id])
+
+    const openUrl = fileUrl || video?.url
+    const type = video?.type || 'other'
+
+    if (type === 'image') {
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-stone-950 p-6">
+                <img
+                    src={openUrl}
+                    alt={video?.title || video?.fileName || 'Imported image'}
+                    className="max-h-full max-w-full rounded-xl object-contain shadow-2xl"
+                    onLoad={onReady}
+                    onError={onReady}
+                />
+            </div>
+        )
+    }
+
+    if (type === 'audio') {
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-950 to-neutral-900 p-8 text-white">
+                <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-white/10 p-8 shadow-2xl">
+                    <div className="mb-4 text-sm uppercase tracking-[0.25em] text-amber-200">Audio</div>
+                    <h2 className="mb-6 text-2xl font-bold">{video?.title || video?.fileName || 'Audio file'}</h2>
+                    <audio src={openUrl} controls className="w-full" onCanPlay={onReady} />
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="flex h-full w-full items-center justify-center bg-[#fff4d3] p-8 text-stone-900 dark:bg-neutral-950 dark:text-white">
+            <div className="max-w-md rounded-3xl border border-amber-200 bg-[#fff8e5] p-8 text-center shadow-xl dark:border-white/10 dark:bg-white/5">
+                <FileText className="mx-auto mb-4 h-12 w-12 text-amber-700 dark:text-amber-300" />
+                <h2 className="mb-2 text-xl font-bold">{video?.title || video?.fileName || 'Imported document'}</h2>
+                <p className="mb-5 text-sm text-stone-600 dark:text-neutral-400">
+                    Omni imported this item as a resource. Open it externally if the in-app viewer cannot preview it yet.
+                </p>
+                {openUrl && (
+                    <a
+                        href={openUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex rounded-full bg-stone-950 px-5 py-2 text-sm font-semibold text-white hover:bg-stone-800 dark:bg-white dark:text-neutral-950"
+                    >
+                        Open resource
+                    </a>
+                )}
+            </div>
+        </div>
+    )
+}
+
 
 const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext, onPrevious, courseId, onTimeUpdate, autoPlay, onAspectRatioChange }, ref) {
     const { settings, updateSettings } = useSettings()
@@ -225,6 +286,14 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             return
         }
 
+        if (isDocumentLike(video.type) && video.url) {
+            setVideoUrl(video.url)
+            setIsLoading(video.type === 'pdf')
+            setDuration(video.duration || 0)
+            setResumePosition(0)
+            return
+        }
+
         // Check if it's a YouTube video (has youtubeId or URL points to youtube.com/youtu.be)
         const isYouTube = video.youtubeId ||
             (video.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')))
@@ -294,7 +363,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                 }
             } else {
                 // No file path available — video needs path repair
-                setError('Video file path not found. Please re-import this course or restart the server.')
+                setError('File path not found. Please re-import this course or restart the server.')
                 setIsLoading(false)
                 return
             }
@@ -1084,8 +1153,8 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     // YouTube and Google Drive videos are embedded in cross-origin iframes
     // whose play/pause/seek/volume can't be controlled from outside.
-    // We still show MyStudy's prev/next, fullscreen, settings, and captions controls.
-    const isEmbeddedPlayer = !!(video?.type === 'pdf' || video?.youtubeId || video?.driveFileId ||
+    // We still show Omni's prev/next, fullscreen, settings, and captions controls.
+    const isEmbeddedPlayer = !!(isDocumentLike(video?.type) || video?.youtubeId || video?.driveFileId ||
         (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be') || video.url.includes('drive.google.com'))))
 
     return (
@@ -1166,6 +1235,20 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                             if (video?.id) {
                                 updateVideoProgress(video.id, 0, 1)
                                 markVideoComplete(video.id)
+                            }
+                        }}
+                    />
+                </div>
+            ) : isDocumentLike(video?.type) ? (
+                <div className="w-full h-full relative z-10 flex flex-col">
+                    <NonVideoResourceViewer
+                        video={video}
+                        fileUrl={videoUrl}
+                        onReady={() => {
+                            setIsLoading(false)
+                            setError(null)
+                            if (video?.id) {
+                                updateVideoProgress(video.id, 0, 1)
                             }
                         }}
                     />

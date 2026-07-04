@@ -7,6 +7,18 @@
 
 TutIn is a modern, powerful course learning platform that helps you organize, track, and master video courses from multiple sources. Built with React and powered by cutting-edge AI, it works completely offline after initial setup and gives you full control over your learning journey.
 
+## Omni Architecture Governance
+
+The universal source import architecture is frozen as v1.0. Start here for future Telegram, source adapter, import engine, and search/indexing work:
+
+- [Architecture Freeze Plan](./00-governance/architecture-freeze-plan.md)
+- [Architecture Principles](./00-governance/architecture-principles.md)
+- [Architecture Versioning Policy](./00-governance/versioning-policy.md)
+- [ADR Template](./00-governance/adr-template.md)
+- [Universal Source Import Architecture v1.0](./01-architecture/universal-source-import-architecture-v1.md)
+- [Engineering Specifications Index](./02-engineering/README.md)
+- [Implementation Roadmap Index](./03-implementation/README.md)
+
 ![TutIn](./screenshot.png)
 
 ## 🚀 Quick Start

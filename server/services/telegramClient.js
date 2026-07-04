@@ -278,7 +278,8 @@ export async function getTopics(chatId, limit = 500) {
 }
 
 /**
- * Fetch messages from a chat, filtered to video and PDF only.
+ * Fetch media messages from a chat. Existing callers default to videos/PDFs;
+ * source scanners can opt into images and other document kinds.
  *
  * @param {string} chatId   - Peer ID as a string (comes from URL param)
  * @param {number} limit    - Max messages to scan per batch
@@ -304,18 +305,24 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
         params.replyTo = Number(topicId)
     }
 
-    const videoMessages = await client.getMessages(entity, {
+    const mediaKinds = new Set(options.mediaKinds || ['video', 'pdf'])
+
+    const videoMessages = mediaKinds.has('video') ? await client.getMessages(entity, {
         ...params,
         filter: new Api.InputMessagesFilterVideo(),
-    })
+    }) : []
 
     const documentMessages = await client.getMessages(entity, {
         ...params,
         filter: new Api.InputMessagesFilterDocument(),
     })
+    const photoMessages = mediaKinds.has('image') ? await client.getMessages(entity, {
+        ...params,
+        filter: new Api.InputMessagesFilterPhotos(),
+    }) : []
 
     // Combine, deduplicate by ID, and sort by date descending
-    const allMessages = [...videoMessages, ...documentMessages]
+    const allMessages = [...videoMessages, ...documentMessages, ...photoMessages]
     const uniqueMessagesMap = new Map()
     for (const msg of allMessages) {
         if (!uniqueMessagesMap.has(msg.id)) {
@@ -324,17 +331,50 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
     }
     const messages = Array.from(uniqueMessagesMap.values()).sort((a, b) => b.date - a.date)
 
-    const videos = []
+    const mediaItems = []
 
     for (const msg of messages) {
-        if (!msg.media || !msg.media.document) continue
+        if (!msg.media) continue
+
+        if (msg.media.photo && mediaKinds.has('image')) {
+            const sizes = msg.media.photo.sizes || []
+            const largest = sizes
+                .map(size => Number(size.size || 0))
+                .sort((a, b) => b - a)[0] || 0
+            mediaItems.push({
+                id: msg.id,
+                date: msg.date,
+                message: msg.message || '',
+                fileName: `Photo_${msg.id}.jpg`,
+                mimeType: 'image/jpeg',
+                type: 'image',
+                size: String(largest),
+                duration: 0,
+                thumbnail: null,
+                chatId,
+                topicId,
+            })
+            continue
+        }
+
+        if (!msg.media.document) continue
 
         const doc = msg.media.document
         const mimeType = doc.mimeType || ''
-        
-        // Allow videos and PDFs
+
         const isPdf = mimeType === 'application/pdf'
-        if (!mimeType.startsWith('video/') && !isPdf) continue
+        const isVideo = mimeType.startsWith('video/')
+        const isImage = mimeType.startsWith('image/')
+        const isAudio = mimeType.startsWith('audio/')
+        const isDocument = !isPdf && !isVideo && !isImage && !isAudio
+        let type = 'other'
+        if (isVideo) type = 'video'
+        else if (isPdf) type = 'pdf'
+        else if (isImage) type = 'image'
+        else if (isAudio) type = 'audio'
+        else if (isDocument) type = 'document'
+
+        if (!mediaKinds.has(type) && !(type === 'document' && mediaKinds.has('other'))) continue
 
         // Pull the filename from document attributes if available
         let fileName = ''
@@ -350,7 +390,10 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
 
         // Sometimes videos are sent without proper names
         if (!fileName) {
-            fileName = isPdf ? `Document_${doc.id}.pdf` : `Video_${doc.id}.mp4`
+            if (isPdf) fileName = `Document_${doc.id}.pdf`
+            else if (isImage) fileName = `Image_${doc.id}.jpg`
+            else if (isAudio) fileName = `Audio_${doc.id}`
+            else fileName = `Video_${doc.id}.mp4`
         }
 
         // Optionally grab the smallest thumbnail as base64. Bulk scan keeps this off
@@ -370,13 +413,13 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
             }
         }
 
-        videos.push({
+        mediaItems.push({
             id: msg.id,
             date: msg.date,
             message: msg.message || '',
             fileName,
             mimeType,
-            type: isPdf ? 'pdf' : 'video',
+            type,
             size: doc.size?.toString() || '0',
             duration,
             thumbnail,
@@ -385,8 +428,8 @@ export async function getMessages(chatId, limit = 50, offsetId = 0, topicId = nu
         })
     }
 
-    console.log(`[Telegram] Chat ${chatId}: ${videos.length} videos (scanned ${messages.length} msgs)`)
-    return videos
+    console.log(`[Telegram] Chat ${chatId}: ${mediaItems.length} media items (scanned ${messages.length} msgs)`)
+    return mediaItems
 }
 
 export async function scanMessages(chatId, options = {}) {
@@ -410,7 +453,7 @@ export async function scanMessages(chatId, options = {}) {
                 Math.min(batchSize, remainingForTopic),
                 offsetId,
                 topicId,
-                { includeThumbnails: false, minId: options.minId }
+                { includeThumbnails: false, minId: options.minId, mediaKinds: options.mediaKinds }
             )
 
             if (batch.length === 0) break

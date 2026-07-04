@@ -1,10 +1,10 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { Play, Clock, Video, MoreVertical, Pencil, Trash2, RefreshCw, Link2 } from 'lucide-react'
+import { Play, Clock, Video, MoreVertical, Pencil, Trash2, RefreshCw, Link2, Radio } from 'lucide-react'
 import { formatDuration, deleteCourse, getInstructorAvatarAsync, updateCourse } from '../../utils/db'
 import { useState, useEffect } from 'react'
 import { useNotification } from '../../contexts/NotificationContext'
 
-function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
+function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit, onSync, onSourceUpdate }) {
     const navigate = useNavigate()
     const [showMenu, setShowMenu] = useState(false)
     const [isDeleting, setIsDeleting] = useState(false)
@@ -89,8 +89,20 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
         }
     }
 
+    function handleSourceUpdate(e, source) {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowMenu(false)
+        onSourceUpdate?.(source)
+    }
+
     const isLocalCourse = !!(course.folderHandle || (course.originalTitle && !course.youtubePlaylistId && !course.driveFileId && course.sourceType !== 'external-link'))
     const isExternalCourse = course.sourceType === 'external-link' || !!course.courseUrl
+    const telegramSource = sources.find(source => source.type === 'telegram')
+    const sourceHealthLabel = telegramSource?.healthState
+        ? telegramSource.healthState.replace(/_/g, ' ')
+        : ''
+    const sourceTime = telegramSource?.lastScannedAt || telegramSource?.lastImportedItemAt || telegramSource?.lastImportedAt
 
     async function handleExternalClick() {
         if (isExternalCourse) {
@@ -151,6 +163,12 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
                             <Clock className="w-4 h-4" />
                             {formattedDuration}
                         </span>
+                        {telegramSource && (
+                            <span className="flex items-center gap-1.5 text-sky-700 dark:text-sky-300">
+                                <Radio className="w-4 h-4" />
+                                Telegram{sourceHealthLabel ? ` - ${sourceHealthLabel}` : ''}
+                            </span>
+                        )}
                     </div>
                     {/* Progress Bar */}
                     <div className="mt-3 progress-bar h-1.5 bg-gray-200 dark:bg-white/10 rounded-full overflow-hidden">
@@ -176,6 +194,15 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
+                {telegramSource && (
+                    <button
+                        onClick={(e) => handleSourceUpdate(e, telegramSource)}
+                        className="p-2 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-full transition-colors text-sky-700 dark:text-sky-300"
+                        title="Check Telegram for new material"
+                    >
+                        <RefreshCw className="w-4 h-4" />
+                    </button>
+                )}
             </CardWrapper>
         )
     }
@@ -222,6 +249,13 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
                         {formattedDuration}
                     </div>
 
+                    {telegramSource && (
+                        <div className="absolute bottom-3 left-3 inline-flex items-center gap-1 rounded-md border border-sky-200/60 bg-white/90 px-2 py-1 text-[10px] font-semibold text-sky-800 shadow-sm dark:border-sky-300/20 dark:bg-sky-500/20 dark:text-sky-100">
+                            <Radio className="h-3 w-3" />
+                            Telegram
+                        </div>
+                    )}
+
                     {/* Menu button */}
                     <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="relative">
@@ -256,6 +290,15 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
                                         >
                                             <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
                                             {isSyncing ? 'Scanning...' : 'Sync'}
+                                        </button>
+                                    )}
+                                    {telegramSource && (
+                                        <button
+                                            className="w-full px-3 py-2 text-left text-sm text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-500/10 flex items-center gap-2"
+                                            onClick={(e) => handleSourceUpdate(e, telegramSource)}
+                                        >
+                                            <RefreshCw className="w-3 h-3" />
+                                            Update Telegram
                                         </button>
                                     )}
                                     <button
@@ -296,6 +339,14 @@ function CourseCard({ course, viewMode = 'grid', onRefresh, onEdit, onSync }) {
                                     {course.instructor}
                                 </span>
                             </div>
+                        </div>
+                    )}
+
+                    {telegramSource && (
+                        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+                            <Radio className="h-3 w-3" />
+                            <span>{sourceHealthLabel || 'telegram source'}</span>
+                            {sourceTime && <span className="text-sky-700/70 dark:text-sky-200/70">updated {new Date(sourceTime).toLocaleDateString()}</span>}
                         </div>
                     )}
 

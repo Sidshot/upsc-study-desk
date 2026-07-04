@@ -70,9 +70,9 @@ function Header() {
                             to="/"
                             className="flex items-center gap-3 group"
                         >
-                            <img src="/logo.png" alt="MyStudy Logo" className="w-8 h-8 rounded-lg object-contain transition-transform group-hover:scale-105" />
+                            <img src="/logo.png" alt="Omni Logo" className="w-8 h-8 rounded-lg object-contain transition-transform group-hover:scale-105" />
                             <span className="text-xl font-bold text-gray-900 dark:text-white tracking-tight group-hover:text-gray-600 dark:group-hover:text-neutral-300 transition-colors">
-                                MyStudy
+                                Omni
                             </span>
                         </Link>
                     </div>

@@ -189,13 +189,17 @@ router.get('/topics/:chatId', async (req, res) => {
 router.get('/messages/:chatId', async (req, res) => {
     try {
         const { limit, offsetId, topicId } = req.query
+        const mediaKinds = req.query.mediaKinds
+            ? String(req.query.mediaKinds).split(',').map(kind => kind.trim()).filter(Boolean)
+            : ['video', 'pdf', 'image']
 
         await requireClient(req)
         const messages = await tg.getMessages(
             req.params.chatId,
             Number(limit) || 50,
             Number(offsetId) || 0,
-            topicId ? Number(topicId) : null
+            topicId ? Number(topicId) : null,
+            { mediaKinds }
         )
         res.json(messages)
     } catch (err) {

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Menu } from 'lucide-react'
+import { ChevronLeft, Menu, Radio, RefreshCw } from 'lucide-react'
 import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree } from '../utils/db'
+import { getSourcesByCourse } from '../utils/sources'
 import { useSettings } from '../contexts/SettingsContext'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import VideoPlayer from '../components/player/VideoPlayer'
 import PlaylistSidebar from '../components/player/PlaylistSidebar'
+import SourceUpdateModal from '../components/course/SourceUpdateModal'
 function findModulePath(modules, targetModuleId) {
     if (!modules || !targetModuleId) return []
 
@@ -68,6 +70,8 @@ function CoursePlayerPage() {
     })
     const [currentTime, setCurrentTime] = useState(0)
     const [instructorAvatar, setInstructorAvatar] = useState(null)
+    const [sources, setSources] = useState([])
+    const [sourceUpdateTarget, setSourceUpdateTarget] = useState(null)
     const videoRef = useRef(null)
     const ambientCanvasRef = useRef(null)
 
@@ -155,7 +159,7 @@ function CoursePlayerPage() {
             document.title = course.title
         }
         return () => {
-            document.title = 'MyStudy'
+            document.title = 'Omni'
         }
     }, [course?.title])
 
@@ -179,6 +183,7 @@ function CoursePlayerPage() {
                 return
             }
             setCourse(courseData)
+            setSources(await getSourcesByCourse(courseId).catch(() => []))
 
             // Update last accessed
             await updateCourse(courseId, { lastAccessed: new Date().toISOString() })
@@ -264,6 +269,7 @@ function CoursePlayerPage() {
             if (courseData) {
                 setCourse(courseData)
             }
+            setSources(await getSourcesByCourse(courseId).catch(() => []))
 
             // Update currentVideo with fresh data if it exists
             if (currentVideo) {
@@ -343,6 +349,8 @@ function CoursePlayerPage() {
             setCurrentVideo(allVideos[currentIndex - 1])
         }
     }
+
+    const telegramSource = sources.find(source => source.type === 'telegram')
 
     // Ambient Mode Effect
     const innerAmbientCanvasRef = useRef(null)
@@ -486,21 +494,38 @@ function CoursePlayerPage() {
                             <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
                                 <div>
                                     {course?.title && (
-                                        <div className="flex items-center flex-wrap gap-1.5 text-xs font-semibold text-primary-fg dark:text-neutral-400 uppercase tracking-wider mb-2 select-none">
-                                            <span className="truncate max-w-[200px] sm:max-w-[300px]" title={course.title}>
-                                                {course.title}
-                                            </span>
-                                            {findModulePath(modules, currentVideo.moduleId).map(mod => (
-                                                <span key={mod.id} className="flex items-center gap-1.5">
-                                                    <span className="text-light-text-secondary dark:text-dark-text-secondary font-normal">/</span>
-                                                    <span
-                                                        className="text-light-text-secondary dark:text-dark-text-secondary font-medium truncate max-w-[150px] sm:max-w-[250px]"
-                                                        title={mod.title}
-                                                    >
-                                                        {mod.title}
-                                                    </span>
+                                        <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
+                                            <div className="flex items-center flex-wrap gap-1.5 text-xs font-semibold text-primary-fg dark:text-neutral-400 uppercase tracking-wider select-none">
+                                                <span className="truncate max-w-[200px] sm:max-w-[300px]" title={course.title}>
+                                                    {course.title}
                                                 </span>
-                                            ))}
+                                                {findModulePath(modules, currentVideo.moduleId).map(mod => (
+                                                    <span key={mod.id} className="flex items-center gap-1.5">
+                                                        <span className="text-light-text-secondary dark:text-dark-text-secondary font-normal">/</span>
+                                                        <span
+                                                            className="text-light-text-secondary dark:text-dark-text-secondary font-medium truncate max-w-[150px] sm:max-w-[250px]"
+                                                            title={mod.title}
+                                                        >
+                                                            {mod.title}
+                                                        </span>
+                                                    </span>
+                                                ))}
+                                                {telegramSource && (
+                                                    <span className="ml-1 inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] text-sky-700 dark:border-sky-300/20 dark:bg-sky-500/10 dark:text-sky-300">
+                                                        <Radio className="h-3 w-3" />
+                                                        Telegram
+                                                    </span>
+                                                )}
+                                            </div>
+                                            {telegramSource && (
+                                                <button
+                                                    onClick={() => setSourceUpdateTarget({ course, source: telegramSource })}
+                                                    className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-[#fff8e5] px-3 py-1.5 text-xs font-semibold text-stone-800 hover:border-amber-400 dark:border-white/10 dark:bg-white/5 dark:text-amber-200 dark:hover:border-amber-300/50"
+                                                >
+                                                    <RefreshCw className="h-3.5 w-3.5" />
+                                                    Update Telegram
+                                                </button>
+                                            )}
                                         </div>
                                     )}
                                     <h2 className="text-lg sm:text-2xl font-bold mb-2">{currentVideo.title}</h2>
@@ -555,6 +580,13 @@ function CoursePlayerPage() {
                 />
             </div>
 
+            <SourceUpdateModal
+                isOpen={!!sourceUpdateTarget}
+                source={sourceUpdateTarget?.source}
+                course={sourceUpdateTarget?.course}
+                onClose={() => setSourceUpdateTarget(null)}
+                onImported={refreshModulesOnly}
+            />
         </div>
     )
 }

@@ -1,5 +1,7 @@
 const VIDEO_EXTENSIONS = new Set(['.mp4', '.mkv', '.webm', '.mov', '.avi', '.m4v', '.ts'])
 const PDF_EXTENSIONS = new Set(['.pdf'])
+const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.bmp'])
+const AUDIO_EXTENSIONS = new Set(['.mp3', '.m4a', '.wav', '.ogg', '.aac'])
 
 const LECTURE_PATTERNS = [
     /\b(?:lecture|lect|lec|class|video|vid|session|sess|day|part|episode|ep)\s*[-_.:#]?\s*(\d{1,4})(?:\s*(?:[a-z]))?\b/i,
@@ -81,6 +83,15 @@ function detectResourceKind(item) {
     if (item.type === 'video' || item.mimeType?.startsWith?.('video/') || VIDEO_EXTENSIONS.has(ext)) {
         return 'lecture'
     }
+    if (item.type === 'image' || item.mimeType?.startsWith?.('image/') || IMAGE_EXTENSIONS.has(ext)) {
+        return 'image'
+    }
+    if (item.type === 'audio' || item.mimeType?.startsWith?.('audio/') || AUDIO_EXTENSIONS.has(ext)) {
+        return 'audio'
+    }
+    if (item.type === 'document') {
+        return 'document'
+    }
     const hint = RESOURCE_HINTS.find(entry => entry.pattern.test(name))
     return hint?.kind || 'resource'
 }
@@ -133,7 +144,12 @@ function analyzeItem(item, source, rules = {}) {
         url: item.url || source?.streamUrlFor?.(item),
         fileSize: Number(item.size || item.fileSize || 0),
         duration: Number(item.duration || 0),
-        type: kind === 'lecture' ? 'video' : 'pdf',
+        type: kind === 'lecture' ? 'video'
+            : kind === 'notes' ? 'pdf'
+                : kind === 'image' ? 'image'
+                    : kind === 'audio' ? 'audio'
+                        : kind === 'document' ? 'document'
+                            : 'other',
     }
 }
 
@@ -149,6 +165,7 @@ function toImportVideo(item, order) {
     return {
         title: isPdf ? item.title : buildVideoTitle(item),
         originalTitle: item.originalTitle,
+        description: item.message || '',
         fileName: item.fileName,
         fileSize: item.fileSize,
         url: item.url,

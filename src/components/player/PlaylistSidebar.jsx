@@ -24,6 +24,10 @@ function collectAllVideos(modules) {
     return result
 }
 
+function isLectureItem(item) {
+    return !['pdf', 'image', 'audio', 'document', 'other'].includes(item?.type)
+}
+
 /**
  * Collect all top-level and sub-modules in a single list
  * (No longer used for Bulk Edit, but kept if needed elsewhere)
@@ -179,16 +183,17 @@ function PlaylistSidebar({
 
     // Calculate totals from tree
     const allVideos = useMemo(() => collectAllVideos(modules), [modules])
-    const totalVideos = allVideos.length
-    const completedVideos = allVideos.filter(v => v.isCompleted).length
-    const totalDuration = allVideos.reduce((sum, v) => sum + (v.duration || 0), 0)
+    const lectureVideos = allVideos.filter(isLectureItem)
+    const totalVideos = lectureVideos.length
+    const completedVideos = lectureVideos.filter(v => v.isCompleted).length
+    const totalDuration = lectureVideos.reduce((sum, v) => sum + (v.duration || 0), 0)
 
     // Use course's stored completion percentage
     const progressPercentage = course?.completionPercentage ?? 0
 
     // Calculate remaining time
     const remainingDuration = allVideos
-        .filter(v => !v.isCompleted)
+        .filter(v => isLectureItem(v) && !v.isCompleted)
         .reduce((sum, v) => sum + (v.duration || 0), 0)
 
     /**
@@ -205,9 +210,11 @@ function PlaylistSidebar({
 
         // Calculate completion including sub-modules
         const allModuleVideos = collectAllVideos([module])
-        const totalModuleCompleted = allModuleVideos.filter(v => v.isCompleted).length
-        const totalModuleCount = allModuleVideos.length
-        const moduleDuration = allModuleVideos.reduce((sum, v) => sum + (v.duration || 0), 0)
+        const moduleLectures = allModuleVideos.filter(isLectureItem)
+        const moduleResources = allModuleVideos.filter(v => !isLectureItem(v))
+        const totalModuleCompleted = moduleLectures.filter(v => v.isCompleted).length
+        const totalModuleCount = moduleLectures.length
+        const moduleDuration = moduleLectures.reduce((sum, v) => sum + (v.duration || 0), 0)
 
         return (
             <div key={module.id} className={`${depth === 0 ? 'border-b border-light-border dark:border-dark-border last:border-b-0' : ''}`}>
@@ -240,6 +247,10 @@ function PlaylistSidebar({
                                 <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary select-none">
                                     {totalModuleCompleted}/{totalModuleCount} videos • {formatDuration(moduleDuration)}
                                 </p>
+                            ) : moduleResources.length > 0 ? (
+                                <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary select-none">
+                                    {moduleResources.length} resources
+                                </p>
                             ) : hasSubModules ? (
                                 <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary select-none">
                                     {module.subModules.length} sub-modules • {formatDuration(moduleDuration)}
@@ -258,8 +269,9 @@ function PlaylistSidebar({
 
                         {/* Bifurcated Content */}
                         {(() => {
-                            const lectures = module.videos?.filter(v => v.type !== 'pdf') || []
+                            const lectures = module.videos?.filter(isLectureItem) || []
                             const notes = module.videos?.filter(v => v.type === 'pdf') || []
+                            const resources = module.videos?.filter(v => !isLectureItem(v) && v.type !== 'pdf') || []
 
                             const renderItem = (video) => {
                                 const isActive = currentVideo?.id === video.id
@@ -299,9 +311,13 @@ function PlaylistSidebar({
                                             <div className={`line-clamp-2 ${isCompleted ? 'text-light-text-secondary dark:text-dark-text-secondary line-through' : ''} ${isActive ? 'text-primary-fg font-medium' : ''}`}>
                                                 {video.title}
                                             </div>
-                                            {video.type !== 'pdf' && (
+                                            {isLectureItem(video) ? (
                                                 <div className="flex items-center gap-2 mt-0.5 text-xs text-light-text-secondary dark:text-dark-text-secondary">
                                                     <span>{formatDuration(video.duration)}</span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex items-center gap-2 mt-0.5 text-xs text-light-text-secondary dark:text-dark-text-secondary">
+                                                    <span>{video.type === 'image' ? 'Image' : video.type === 'audio' ? 'Audio' : video.type === 'document' ? 'Document' : 'Resource'}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -328,6 +344,15 @@ function PlaylistSidebar({
                                         </div>
                                     )}
                                     {notes.map(renderItem)}
+
+                                    {resources.length > 0 && (
+                                        <div className="mt-2 mb-1" style={{ paddingLeft: `${28 + depth * 16}px` }}>
+                                            <span className="text-[10px] font-bold tracking-wider text-light-text-secondary dark:text-dark-text-secondary uppercase">
+                                                Other Resources
+                                            </span>
+                                        </div>
+                                    )}
+                                    {resources.map(renderItem)}
                                 </>
                             )
                         })()}
@@ -366,7 +391,7 @@ function PlaylistSidebar({
                     <div className="px-4 pt-4 pb-2">
                         <div className="flex items-center justify-between text-sm mb-1">
                             <span className="text-light-text-secondary dark:text-dark-text-secondary">
-                                {completedVideos}/{totalVideos} videos completed
+                                {completedVideos}/{totalVideos} lectures completed
                             </span>
                             <span className="font-medium text-primary-fg">
                                 {Math.round(progressPercentage)}%

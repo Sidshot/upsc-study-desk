@@ -35,6 +35,7 @@ import dubbingRouter from './routes/dubbing.js'
 import youtubeRouter from './routes/youtube.js'
 import telegramRouter from './routes/telegram.js'
 import appRouter from './routes/app.js'
+import sourcesRouter from './routes/sources.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -148,6 +149,7 @@ app.use('/api/dub', dubbingRouter)
 app.use('/api/youtube', youtubeRouter)
 app.use('/api/telegram', telegramRouter)
 app.use('/api/app', appRouter)
+app.use('/api/sources', sourcesRouter)
 
 // ============================================
 // STATIC FILE SERVING (PRODUCTION)

@@ -7,7 +7,7 @@ import {
 
 const slides = [
     {
-        title: 'Welcome to MyStudy',
+        title: 'Welcome to Omni',
         description: 'Your premium local-first video course manager. Organize, track, and master courses from any source — all locally and privately.',
         items: [
             { icon: FolderOpen, text: 'Import from local folders, YouTube, Google Drive, or external links' },
@@ -17,7 +17,7 @@ const slides = [
     },
     {
         title: 'Import Any Folder',
-        description: 'Bring all your learning content into one library. MyStudy auto-detects modules and organizes your videos instantly.',
+        description: 'Bring all your learning content into one library. Omni auto-detects modules and organizes your videos instantly.',
         items: [
             { icon: FolderOpen, text: 'Local folders with automatic structure detection' },
             { icon: Youtube, text: 'YouTube playlists with metadata and thumbnails' },

@@ -835,7 +835,7 @@ function SettingsModal({ isOpen, onClose }) {
                                     <>
                                         <div>
                                             <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary mb-5">
-                                                Help us improve MyStudy! Your feedback goes directly to the development team.
+                                                Help us improve Omni! Your feedback goes directly to the development team.
                                             </p>
 
                                             {/* Category */}
@@ -901,7 +901,7 @@ function SettingsModal({ isOpen, onClose }) {
                                                 try {
                                                     setSendingFeedback(true)
                                                     
-                                                    const subject = encodeURIComponent(`MyStudy Feedback: ${feedbackCategory}`)
+                                                    const subject = encodeURIComponent(`Omni Feedback: ${feedbackCategory}`)
                                                     const body = encodeURIComponent(`Category: ${feedbackCategory}\n\nMessage:\n${feedbackMessage}\n\nReply to: ${feedbackEmail || 'Not provided'}`)
                                                     
                                                     window.location.href = `mailto:indocurry@proton.me?subject=${subject}&body=${body}`
