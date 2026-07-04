@@ -107,9 +107,9 @@ export default {
                     }
                 },
                 light: {
-                    bg: '#FFFFFF',
-                    surface: '#F8F9FA',
-                    border: '#E5E7EB',
+                    bg: '#F6EBCB',
+                    surface: '#FFF7DF',
+                    border: '#DFCA98',
                     text: {
                         primary: '#171717',
                         secondary: '#737373'

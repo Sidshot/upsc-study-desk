@@ -52,14 +52,14 @@ function Header() {
 
     return (
         <>
-            <header className="h-16 sticky top-0 z-50 bg-white dark:bg-black/60 backdrop-blur-2xl border-b border-gray-200 dark:border-white/5 transition-all duration-300">
+            <header className="h-16 sticky top-0 z-50 bg-[#fff7df]/90 dark:bg-black/60 backdrop-blur-2xl border-b border-amber-200/80 dark:border-white/5 transition-all duration-300">
                 <div className="h-full px-4 flex items-center">
                     {/* Left: Hamburger + Logo */}
                     <div className="flex items-center gap-4 flex-shrink-0">
                         {/* Hamburger Menu */}
                         <button
                             onClick={toggleSidebar}
-                            className="p-2 rounded-full text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all duration-200"
+                            className="omni-action !rounded-full !p-2 text-gray-600 dark:text-neutral-400"
                             aria-label="Toggle sidebar"
                         >
                             <Menu className="w-6 h-6" />
@@ -90,7 +90,7 @@ function Header() {
                                     placeholder="Search courses..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-10 py-2 rounded-full border border-gray-300 dark:border-white/10 bg-gray-100 dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-400 focus:border-gray-400 dark:focus:border-white/20 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 transition-all"
+                                    className="w-full pl-10 pr-10 py-2 rounded-full border border-amber-200 dark:border-white/10 bg-[#fff8e5] dark:bg-white/5 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-neutral-400 focus:border-amber-500 dark:focus:border-white/20 outline-none focus:outline-none focus-visible:outline-none ring-0 focus:ring-0 transition-all"
                                 />
                                 {searchQuery && (
                                     <button
@@ -131,10 +131,10 @@ function Header() {
                                 {showAddMenu && (
                                     <>
                                         <div className="fixed inset-0 z-10" onClick={() => setShowAddMenu(false)} />
-                                        <div className="absolute right-0 top-full mt-2 w-48 py-2 bg-white dark:bg-neutral-900 rounded-lg shadow-xl border border-gray-200 dark:border-white/10 z-20">
+                                        <div className="absolute right-0 top-full mt-2 w-52 py-2 omni-tile shadow-xl z-20">
                                             <button
                                                 onClick={handleImportClick}
-                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-amber-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             >
                                                 <FolderOpen className="w-4 h-4" />
                                                 Local Folder
@@ -144,7 +144,7 @@ function Header() {
                                                     setShowYouTubeModal(true)
                                                     setShowAddMenu(false)
                                                 }}
-                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-amber-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             >
                                                 <Youtube className="w-4 h-4 text-red-500" />
                                                 From YouTube
@@ -154,7 +154,7 @@ function Header() {
                                                     setShowGoogleDriveModal(true)
                                                     setShowAddMenu(false)
                                                 }}
-                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-amber-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             >
                                                 <HardDrive className="w-4 h-4 text-primary" />
                                                 From Google Drive
@@ -164,7 +164,7 @@ function Header() {
                                                     setShowExternalLinkModal(true)
                                                     setShowAddMenu(false)
                                                 }}
-                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-amber-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             >
                                                 <Link2 className="w-4 h-4 text-blue-500" />
                                                 From External Link
@@ -174,7 +174,7 @@ function Header() {
                                                     setShowTelegramModal(true)
                                                     setShowAddMenu(false)
                                                 }}
-                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
+                                                className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-white hover:bg-amber-100 dark:hover:bg-white/10 flex items-center gap-2"
                                             >
                                                 <Send className="w-4 h-4 text-blue-500" />
                                                 From Telegram
@@ -188,7 +188,7 @@ function Header() {
                         {/* Theme Toggle */}
                         <button
                             onClick={toggleTheme}
-                            className="p-2 rounded-full text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all duration-200"
+                            className="omni-action !rounded-full !p-2 text-gray-600 dark:text-neutral-400"
                             aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
                         >
                             {isDark ? (
@@ -201,7 +201,7 @@ function Header() {
                         {/* Settings */}
                         <button
                             onClick={() => setShowSettings(true)}
-                            className="p-2 rounded-full text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 transition-all duration-200"
+                            className="omni-action !rounded-full !p-2 text-gray-600 dark:text-neutral-400"
                             aria-label="Open settings"
                         >
                             <Settings className="w-5 h-5" />

@@ -77,8 +77,8 @@ function Sidebar() {
             <aside
                 className={`
                     fixed top-16 left-0 h-[calc(100vh-4rem)] z-50
-                    bg-white dark:bg-black/60 backdrop-blur-2xl
-                    border-r border-gray-200 dark:border-white/5
+                    bg-[#fff7df]/90 dark:bg-black/60 backdrop-blur-2xl
+                    border-r border-amber-200/80 dark:border-white/5
                     transition-all duration-300 ease-in-out
                     flex flex-col
                     ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
@@ -98,7 +98,7 @@ function Sidebar() {
                                         transition-all duration-300 group
                                         ${isActive(path)
                                             ? 'bg-primary-fg/10 text-primary-fg'
-                                            : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+                                            : 'text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-amber-100 dark:hover:bg-white/5'
                                         }
                                         ${!isExpanded ? 'justify-center' : ''}
                                     `}
@@ -127,7 +127,7 @@ function Sidebar() {
                                             onClick={handleNavClick}
                                             className="flex items-center gap-3 px-3 py-2.5 rounded-full text-sm
                                                 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white
-                                                hover:bg-gray-100 dark:hover:bg-white/5
+                                                hover:bg-amber-100 dark:hover:bg-white/5
                                                 transition-all duration-200"
                                         >
                                             {instructor.avatar ? (
@@ -166,7 +166,7 @@ function Sidebar() {
                 </nav>
 
                 {/* Bottom Section - Profile & Collapse Toggle */}
-                <div className="border-t border-gray-200 dark:border-white/5 p-3 bg-gray-50 dark:bg-black/20">
+                <div className="border-t border-amber-200/80 dark:border-white/5 p-3 bg-[#f3e5bf]/80 dark:bg-black/20">
 
                     {/* Collapse Toggle (desktop only) */}
                     <button
@@ -174,7 +174,7 @@ function Sidebar() {
                         className={`
                             hidden md:flex items-center gap-4 px-3 py-3 rounded-full w-full
                             text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-white
-                            hover:bg-gray-100 dark:hover:bg-white/5
+                            hover:bg-amber-100 dark:hover:bg-white/5
                             transition-all duration-200
                             ${!isExpanded ? 'justify-center' : ''}
                         `}

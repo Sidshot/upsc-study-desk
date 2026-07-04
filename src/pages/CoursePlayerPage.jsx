@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Menu, Radio, RefreshCw } from 'lucide-react'
-import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree } from '../utils/db'
+import { ChevronLeft, Menu, Radio, RefreshCw, Trash2 } from 'lucide-react'
+import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree, deleteCourse } from '../utils/db'
 import { getSourcesByCourse } from '../utils/sources'
 import { useSettings } from '../contexts/SettingsContext'
 import LoadingSpinner from '../components/common/LoadingSpinner'
@@ -352,6 +352,19 @@ function CoursePlayerPage() {
 
     const telegramSource = sources.find(source => source.type === 'telegram')
 
+    async function handleDeleteCourse() {
+        if (!course) return
+        if (!confirm(`Delete "${course.title}"? This removes it from Omni but does not delete original Telegram or local source files.`)) {
+            return
+        }
+        try {
+            await deleteCourse(course.id)
+            navigate('/')
+        } catch (err) {
+            setError('Failed to delete course: ' + err.message)
+        }
+    }
+
     // Ambient Mode Effect
     const innerAmbientCanvasRef = useRef(null)
 
@@ -526,6 +539,13 @@ function CoursePlayerPage() {
                                                     Update Telegram
                                                 </button>
                                             )}
+                                            <button
+                                                onClick={handleDeleteCourse}
+                                                className="inline-flex items-center gap-2 rounded-full border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-100 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300 dark:hover:bg-red-500/20"
+                                            >
+                                                <Trash2 className="h-3.5 w-3.5" />
+                                                Delete Course
+                                            </button>
                                         </div>
                                     )}
                                     <h2 className="text-lg sm:text-2xl font-bold mb-2">{currentVideo.title}</h2>

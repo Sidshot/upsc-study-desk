@@ -25,7 +25,7 @@ function AppContent() {
     })
 
     return (
-        <div className="min-h-screen bg-light-bg dark:bg-dark-bg text-light-text-primary dark:text-dark-text-primary transition-colors duration-300">
+        <div className="min-h-screen bg-transparent text-light-text-primary dark:text-dark-text-primary transition-colors duration-300">
             <Header />
             <Sidebar />
             <main

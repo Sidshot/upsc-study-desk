@@ -126,14 +126,14 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-3xl max-h-[86vh] overflow-hidden rounded-3xl border border-amber-200/70 dark:border-white/10 bg-[#f8f0d8] dark:bg-neutral-950 shadow-2xl">
+            <div className="omni-import-surface w-full max-w-4xl max-h-[86vh] overflow-hidden rounded-3xl border border-amber-200/70 dark:border-white/10 bg-[#f8f0d8] dark:bg-neutral-950 shadow-2xl">
                 <div className="flex items-start justify-between gap-4 border-b border-amber-200/80 dark:border-white/10 p-5">
                     <div>
                         <div className="text-xs uppercase tracking-[0.2em] text-amber-700 dark:text-amber-300">Telegram source update</div>
                         <h2 className="mt-1 text-2xl font-bold text-stone-950 dark:text-white">{course?.title}</h2>
                         <p className="mt-1 text-sm text-stone-600 dark:text-neutral-400">{source.name} • metadata-only scan</p>
                     </div>
-                    <button onClick={onClose} className="rounded-full p-2 text-stone-600 hover:bg-amber-100 dark:text-neutral-400 dark:hover:bg-white/10">
+                    <button onClick={onClose} className="omni-action !rounded-full !p-2 text-stone-600 dark:text-neutral-400">
                         <X className="h-5 w-5" />
                     </button>
                 </div>
@@ -147,9 +147,9 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
                     )}
 
                     {status === 'idle' && (
-                        <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-stone-700 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300">
+                        <div className="omni-tile p-5 text-stone-700 dark:text-neutral-300">
                             <p className="mb-4">Check Telegram for material added after the last scan. Omni will only discover metadata first; files are imported only after you select them.</p>
-                            <button onClick={handleScan} className="inline-flex items-center gap-2 rounded-xl bg-stone-950 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 dark:bg-white dark:text-neutral-950">
+                            <button onClick={handleScan} className="omni-action-primary">
                                 <RefreshCw className="h-4 w-4" />
                                 Check for updates
                             </button>
@@ -168,7 +168,7 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
                         <>
                             <div className="mb-4 grid gap-3 sm:grid-cols-4">
                                 {['video', 'pdf', 'image', 'document'].map(kind => (
-                                    <div key={kind} className="rounded-2xl border border-amber-200 bg-amber-50/60 p-3 dark:border-white/10 dark:bg-white/5">
+                                    <div key={kind} className="omni-tile p-3">
                                         <div className="text-xs uppercase text-stone-500 dark:text-neutral-500">{kind}</div>
                                         <div className="text-2xl font-bold text-stone-950 dark:text-white">{preview?.counts?.[kind] || 0}</div>
                                     </div>
@@ -210,7 +210,7 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
 
                             <div className="space-y-3">
                                 {visibleItems.length === 0 ? (
-                                    <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-5 text-center text-stone-600 dark:border-white/10 dark:bg-white/5 dark:text-neutral-400">
+                                    <div className="omni-tile p-5 text-center text-stone-600 dark:text-neutral-400">
                                         No items match this filter.
                                     </div>
                                 ) : visibleItems.map(item => {
@@ -219,7 +219,7 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
                                         <button
                                             key={item.id}
                                             onClick={() => toggleItem(item.id)}
-                                            className="flex w-full items-start gap-3 rounded-2xl border border-amber-200 bg-[#fff8e5] p-3 text-left transition hover:border-amber-400 dark:border-white/10 dark:bg-white/5 dark:hover:border-amber-300/50"
+                                            className="flex w-full items-start gap-3 omni-tile omni-tile-hover p-3 text-left"
                                         >
                                             <span className={`mt-1 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border ${selectedIds.has(item.id) ? 'border-amber-700 bg-amber-700 text-white' : 'border-stone-300 dark:border-neutral-600'}`}>
                                                 {selectedIds.has(item.id) ? '✓' : ''}
@@ -247,14 +247,14 @@ function SourceUpdateModal({ isOpen, source, course, onClose, onImported }) {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 border-t border-amber-200/80 p-5 dark:border-white/10">
-                    <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-amber-100 dark:text-neutral-300 dark:hover:bg-white/10">
+                    <button onClick={onClose} className="omni-action">
                         Close
                     </button>
                     {status === 'preview' && (
                         <button
                             onClick={handleImport}
                             disabled={selectedCount === 0}
-                            className="rounded-xl bg-stone-950 px-4 py-2 text-sm font-semibold text-white hover:bg-stone-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-neutral-950"
+                            className="omni-action-primary"
                         >
                             Import selected
                         </button>

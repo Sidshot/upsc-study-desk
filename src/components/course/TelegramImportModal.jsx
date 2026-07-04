@@ -423,10 +423,10 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     function renderSmartControls() {
         if (!selectedChannel) return null
         return (
-            <div className="rounded-xl border border-gray-200 dark:border-white/10 p-3 space-y-3">
+            <div className="omni-tile-blue p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                     <div>
-                        <div className="text-sm font-medium text-gray-900 dark:text-white">Smart scan controls</div>
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white">Smart scan controls</div>
                         <div className="text-xs text-gray-500 dark:text-neutral-500">
                             Cached: {cacheStatus?.mediaCount || 0} files
                         </div>
@@ -434,7 +434,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     <select
                         value={smartScanLimit}
                         onChange={(e) => setSmartScanLimit(Number(e.target.value))}
-                        className="px-2 py-1.5 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                        className="px-2 py-1.5 text-sm"
                     >
                         <option value={100}>100</option>
                         <option value={500}>500</option>
@@ -443,7 +443,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     </select>
                 </div>
                 {scanJob && ['running', 'cancelling'].includes(scanJob.status) && (
-                    <div className="space-y-2 rounded-lg bg-blue-50 dark:bg-blue-500/10 p-3">
+                    <div className="space-y-2 rounded-xl border border-sky-200 bg-sky-50 dark:border-sky-300/20 dark:bg-sky-500/10 p-3">
                         <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
                             <span>Scanning Telegram metadata</span>
                             <span>{scanJob.progress || 0}%</span>
@@ -470,7 +470,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     <select
                         value={parseRules.groupBy || 'auto'}
                         onChange={(e) => setParseRules(prev => ({ ...prev, groupBy: e.target.value }))}
-                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                        className="px-3 py-2 text-sm"
                     >
                         <option value="auto">Auto grouping</option>
                         <option value="topic">Group by topics</option>
@@ -481,14 +481,14 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                         value={parseRules.courseTitleOverride || ''}
                         onChange={(e) => setParseRules(prev => ({ ...prev, courseTitleOverride: e.target.value }))}
                         placeholder="Optional course title override"
-                        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                        className="px-3 py-2 text-sm"
                     />
                 </div>
                 <input
                     value={ignoredWordsText}
                     onChange={(e) => setIgnoredWordsText(e.target.value)}
                     placeholder="Ignored words, comma separated: join, channel, @name"
-                    className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-white/10 bg-white dark:bg-white/5 text-sm"
+                    className="w-full px-3 py-2 text-sm"
                 />
                 <label className="flex items-center gap-2 text-xs text-gray-600 dark:text-neutral-400">
                     <input
@@ -503,14 +503,14 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     <button
                         onClick={handleSaveRules}
                         disabled={isSmartScanning}
-                        className="flex-1 py-2 rounded-lg bg-gray-100 dark:bg-white/10 text-sm font-medium hover:bg-gray-200 dark:hover:bg-white/15 disabled:opacity-60"
+                        className="omni-action flex-1"
                     >
                         Save Rules
                     </button>
                     <button
                         onClick={() => handleCachedPreview()}
                         disabled={isSmartScanning || !cacheStatus?.mediaCount}
-                        className="flex-1 py-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-300 text-sm font-medium hover:bg-emerald-500/20 disabled:opacity-50"
+                        className="omni-action flex-1 text-emerald-700 dark:text-emerald-300"
                     >
                         Use Cached Preview
                     </button>
@@ -548,10 +548,10 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     const missingCredentials = !apiId || !apiHash
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 p-4">
-            <div className="max-w-lg w-full mx-auto bg-white dark:bg-neutral-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 overflow-hidden animate-scale-in">
+        <div className="fixed inset-0 z-50 bg-black/55 backdrop-blur-sm flex items-start justify-center pt-10 p-4">
+            <div className="omni-import-surface max-w-4xl w-full mx-auto bg-[#f8f0d8] dark:bg-neutral-950 rounded-3xl shadow-2xl border border-amber-200 dark:border-white/10 overflow-hidden animate-scale-in">
                 {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-white/10">
+                <div className="flex items-center justify-between px-6 py-5 border-b border-amber-200 dark:border-white/10 bg-[#fff7df]/80 dark:bg-white/[0.02]">
                     <div className="flex items-center gap-3">
                         {step !== 'login' && (
                             <button
@@ -567,12 +567,14 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                     else if (step === 'topics') { setStep('channels'); setError('') }
                                     else if (step === 'channels') { setStep('login'); setError('') }
                                 }}
-                                className="p-1.5 -ml-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                                className="omni-action !p-1.5 !rounded-xl -ml-1.5"
                             >
                                 <ChevronLeft className="w-5 h-5" />
                             </button>
                         )}
-                        <Send className="w-5 h-5 text-blue-500" />
+                        <div className="h-10 w-10 rounded-2xl bg-sky-100 text-sky-700 dark:bg-sky-500/10 dark:text-sky-300 flex items-center justify-center">
+                            <Send className="w-5 h-5" />
+                        </div>
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                             {step === 'login' && 'Telegram Login'}
                             {step === 'channels' && 'Select Channel'}
@@ -582,14 +584,14 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                        className="omni-action !p-2 !rounded-xl"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
+                <div className="p-6 max-h-[78vh] overflow-y-auto">
                     {/* Error Display */}
                     {error && (
                         <div className="mb-4 p-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 rounded-xl text-sm flex items-start gap-2">
@@ -739,7 +741,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                         <button
                                             key={ch.id}
                                             onClick={() => handleSelectChannel(ch)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left group"
+                                            className="w-full flex items-center gap-3 p-3 omni-tile omni-tile-hover text-left group"
                                         >
                                             <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                                                 {ch.type === 'channel' ? (
@@ -799,7 +801,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                         <button
                                             onClick={() => handleSmartScan(topics)}
                                             disabled={isSmartScanning}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl bg-blue-50 dark:bg-blue-500/10 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors text-left disabled:opacity-60"
+                                            className="w-full flex items-center gap-3 p-3 omni-tile-blue omni-tile-hover text-left disabled:opacity-60"
                                         >
                                             <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center flex-shrink-0">
                                                 {isSmartScanning ? <Loader className="w-5 h-5 animate-spin" /> : <Wand2 className="w-5 h-5" />}
@@ -818,7 +820,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                         <button
                                             key={topic.id}
                                             onClick={() => handleSelectTopic(topic)}
-                                            className="w-full flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-white/5 transition-colors text-left group"
+                                            className="w-full flex items-center gap-3 p-3 omni-tile omni-tile-hover text-left group"
                                         >
                                             <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center flex-shrink-0">
                                                 <Users className="w-5 h-5 text-blue-500" />
@@ -857,7 +859,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                     <button
                                         onClick={() => handleSmartScan()}
                                         disabled={isSmartScanning}
-                                        className="w-full p-3 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                                        className="w-full p-3 rounded-xl bg-gradient-to-r from-sky-600 to-cyan-600 text-white font-semibold transition-colors flex items-center justify-center gap-2 disabled:opacity-60 shadow-sm hover:-translate-y-0.5"
                                     >
                                         {isSmartScanning ? <Loader className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                                         Smart Scan & Arrange {selectedTopic ? 'This Topic' : 'This Channel'}
@@ -889,10 +891,10 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                             <button
                                                 key={msg.id}
                                                 onClick={() => toggleVideo(msg.id)}
-                                                className={`w-full flex items-start gap-3 p-3 rounded-xl transition-colors text-left ${
+                                                className={`w-full flex items-start gap-3 p-3 transition-colors text-left ${
                                                     selectedVideos.has(msg.id)
-                                                        ? 'bg-blue-50 dark:bg-blue-500/10'
-                                                        : 'hover:bg-gray-50 dark:hover:bg-white/5'
+                                                        ? 'omni-tile-blue'
+                                                        : 'omni-tile omni-tile-hover'
                                                 }`}
                                             >
                                                 <div className={`w-5 h-5 mt-0.5 rounded border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
@@ -935,7 +937,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                             <button
                                                 onClick={() => loadVideos(selectedChannel.id, selectedTopic?.id, messages[messages.length - 1].id)}
                                                 disabled={isLoading}
-                                                className="w-full py-3 mt-2 text-sm font-medium text-blue-500 bg-blue-50 dark:bg-blue-500/10 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-colors flex items-center justify-center gap-2"
+                                                className="omni-action w-full mt-2 text-sky-700 dark:text-sky-300"
                                             >
                                                 {isLoading ? <Loader className="w-4 h-4 animate-spin" /> : 'Load More Media'}
                                             </button>
@@ -946,7 +948,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                     <button
                                         onClick={handleImportSelected}
                                         disabled={selectedVideos.size === 0 || isSmartScanning}
-                                        className="w-full py-3 bg-blue-500 hover:bg-blue-600 disabled:opacity-50 disabled:hover:bg-blue-500 text-white rounded-xl font-medium transition-colors flex items-center justify-center gap-2 mt-2"
+                                        className="omni-action-primary w-full mt-2"
                                     >
                                         {isSmartScanning ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                                         Arrange & Import {selectedVideos.size > 0 ? `${selectedVideos.size} File${selectedVideos.size > 1 ? 's' : ''}` : 'Selected'}

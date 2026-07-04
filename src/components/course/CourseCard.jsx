@@ -186,18 +186,26 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                     </span>
                 </div>
 
-                {/* Edit Button for List View */}
+                {/* Edit/Delete Buttons for List View */}
                 <button
                     onClick={handleEdit}
-                    className="p-2 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-colors text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
+                    className="omni-action !rounded-full !p-2 text-gray-500 dark:text-neutral-400"
                     title="Edit course metadata and progress"
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
+                <button
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="omni-action-danger !rounded-full !p-2"
+                    title="Delete course"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
                 {telegramSource && (
                     <button
                         onClick={(e) => handleSourceUpdate(e, telegramSource)}
-                        className="p-2 hover:bg-sky-50 dark:hover:bg-sky-500/10 rounded-full transition-colors text-sky-700 dark:text-sky-300"
+                        className="omni-action !rounded-full !p-2 text-sky-700 dark:text-sky-300"
                         title="Check Telegram for new material"
                     >
                         <RefreshCw className="w-4 h-4" />
@@ -257,7 +265,7 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                     )}
 
                     {/* Menu button */}
-                    <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-2 right-2 opacity-100 transition-opacity">
                         <div className="relative">
                             <button
                                 onClick={(e) => {
@@ -265,7 +273,7 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                                     e.stopPropagation()
                                     setShowMenu(!showMenu)
                                 }}
-                                className="p-2 bg-white/90 dark:bg-black/40 backdrop-blur-md hover:bg-white dark:hover:bg-black/60 rounded-full text-gray-800 dark:text-white transition-colors border border-gray-200 dark:border-white/10 shadow-sm"
+                                className="p-2 bg-[#fff8e5]/95 dark:bg-black/40 backdrop-blur-md hover:bg-amber-100 dark:hover:bg-black/60 rounded-full text-gray-800 dark:text-white transition-colors border border-amber-200 dark:border-white/10 shadow-sm"
                             >
                                 <MoreVertical className="w-4 h-4" />
                             </button>
@@ -342,13 +350,24 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                         </div>
                     )}
 
-                    {telegramSource && (
-                        <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                        {telegramSource && (
+                        <div className="inline-flex items-center gap-2 rounded-full bg-sky-50 px-2.5 py-1 text-[11px] font-medium text-sky-800 dark:bg-sky-500/10 dark:text-sky-200">
                             <Radio className="h-3 w-3" />
                             <span>{sourceHealthLabel || 'telegram source'}</span>
                             {sourceTime && <span className="text-sky-700/70 dark:text-sky-200/70">updated {new Date(sourceTime).toLocaleDateString()}</span>}
                         </div>
-                    )}
+                        )}
+                        <button
+                            onClick={handleDelete}
+                            disabled={isDeleting}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                            title="Delete course"
+                        >
+                            <Trash2 className="h-3 w-3" />
+                            {isDeleting ? 'Deleting' : 'Delete'}
+                        </button>
+                    </div>
 
                     {/* Progress Bar */}
                     <div className="progress-bar mb-3 h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
