@@ -20,6 +20,17 @@ function isDocumentLike(type) {
     return ['pdf', 'image', 'audio', 'document', 'other'].includes(type)
 }
 
+function isDirectStreamUrl(url) {
+    if (!url || typeof url !== 'string') return false
+    return (
+        url.startsWith('http://') ||
+        url.startsWith('https://') ||
+        url.startsWith('/api/') ||
+        url.startsWith('./api/') ||
+        url.startsWith('../api/')
+    )
+}
+
 function NonVideoResourceViewer({ video, fileUrl, onReady }) {
     useEffect(() => {
         onReady?.()
@@ -330,8 +341,8 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             return
         }
 
-        // Handle generic HTTP streams (like Telegram)
-        if (video.url && video.url.startsWith('http')) {
+        // Handle direct stream URLs (absolute or same-origin relative).
+        if (isDirectStreamUrl(video.url)) {
             setVideoUrl(video.url)
             setIsLoading(true)
             setDuration(video.duration || 0)
@@ -591,7 +602,10 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     // Controls
     function togglePlay() {
-        const isYt = video?.youtubeId || video?.url?.startsWith('http')
+        const isYt = video?.youtubeId || (
+            typeof video?.url === 'string' &&
+            (video.url.includes('youtube.com') || video.url.includes('youtu.be'))
+        )
 
         if (isYt) {
             setIsPlaying(prev => !prev)
@@ -1022,7 +1036,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         if (!video?.id) return
         
         // Skip for external links for now
-        if (video.youtubeId || video.url?.startsWith('http')) return
+        if (video.youtubeId || isDirectStreamUrl(video.url)) return
 
         fetch(`${SERVER_URL}/api/transcripts/${video.id}/languages`)
             .then(res => res.json())
@@ -1052,7 +1066,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         if (!video?.id) return
         
         // Skip for external links
-        if (video.youtubeId || video.url?.startsWith('http')) return
+        if (video.youtubeId || isDirectStreamUrl(video.url)) return
 
         if (!captionsEnabled) return
 

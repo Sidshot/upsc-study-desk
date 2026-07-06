@@ -1,8 +1,10 @@
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
     ChevronDown, ChevronRight, ChevronLeft, Check,
     Pencil, GripVertical, Folder, FolderOpen,
     Play, FileText, Headphones, PictureInPicture
 } from 'lucide-react'
+import { formatDuration, markVideoComplete, updateModule, updateVideo } from '../../utils/db'
 import EditModuleModal from './EditModuleModal'
 import NotesPanel from './NotesPanel'
 import BulkEditPlaylist from './BulkEditPlaylist'
@@ -124,15 +126,19 @@ function PlaylistSidebar({
 
     // Auto-scroll to active video
     useEffect(() => {
-        if (currentVideo?.id && activeTab === 'playlist') {
-            // Small timeout to allow render/expansion
-            setTimeout(() => {
-                const activeEl = document.getElementById(`playlist-item-${currentVideo.id}`)
-                if (activeEl) {
-                    activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                }
-            }, 150)
+        if (!currentVideo?.id || activeTab !== 'playlist') {
+            return undefined
         }
+
+        // Small timeout to allow render/expansion
+        const scrollTimer = window.setTimeout(() => {
+            const activeEl = document.getElementById(`playlist-item-${currentVideo.id}`)
+            if (activeEl) {
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 150)
+
+        return () => window.clearTimeout(scrollTimer)
     }, [currentVideo?.id, activeTab])
 
     function toggleModule(moduleId) {

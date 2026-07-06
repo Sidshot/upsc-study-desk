@@ -35,15 +35,6 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
         }
     }
 
-    async function handleAvatarChange() {
-        // Reload avatar after change
-        if (course.instructor) {
-            const avatar = await getInstructorAvatarAsync(course.instructor)
-            setInstructorAvatar(avatar)
-        }
-        onRefresh?.()
-    }
-
     const completionPercentage = course.completionPercentage || 0
     const formattedDuration = formatDuration(course.totalDuration)
 
@@ -99,6 +90,9 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
     const isLocalCourse = !!(course.folderHandle || (course.originalTitle && !course.youtubePlaylistId && !course.driveFileId && course.sourceType !== 'external-link'))
     const isExternalCourse = course.sourceType === 'external-link' || !!course.courseUrl
     const telegramSource = sources.find(source => source.type === 'telegram')
+    const canUpdateCourse = !!(telegramSource || isLocalCourse)
+    const updateButtonLabel = telegramSource ? 'Update' : 'Sync'
+    const updateButtonTitle = telegramSource ? 'Check Telegram for new material' : 'Rescan this course for changes'
     const sourceHealthLabel = telegramSource?.healthState
         ? telegramSource.healthState.replace(/_/g, ' ')
         : ''
@@ -194,17 +188,19 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                 >
                     <Pencil className="w-4 h-4" />
                 </button>
-                <button
-                    onClick={(e) => {
-                        if (telegramSource) handleSourceUpdate(e, telegramSource)
-                        else handleSync(e)
-                    }}
-                    disabled={isSyncing}
-                    className="omni-action !rounded-full !p-2 text-sky-700 dark:text-sky-300"
-                    title="Update course"
-                >
-                    <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                </button>
+                {canUpdateCourse && (
+                    <button
+                        onClick={(e) => {
+                            if (telegramSource) handleSourceUpdate(e, telegramSource)
+                            else handleSync(e)
+                        }}
+                        disabled={isSyncing}
+                        className="omni-action !rounded-full !p-2 text-sky-700 dark:text-sky-300"
+                        title={updateButtonTitle}
+                    >
+                        <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                    </button>
+                )}
                 <button
                     onClick={handleDelete}
                     disabled={isDeleting}
@@ -292,17 +288,24 @@ function CourseCard({ course, sources = [], viewMode = 'grid', onRefresh, onEdit
                                         <Pencil className="w-3 h-3" />
                                         Edit
                                     </button>
-                                    <button
-                                        className="w-full px-3 py-2 text-left text-sm text-gray-700 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10 flex items-center gap-2"
-                                        onClick={(e) => {
-                                            if (telegramSource) handleSourceUpdate(e, telegramSource)
-                                            else handleSync(e)
-                                        }}
-                                        disabled={isSyncing}
-                                    >
-                                        <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                                        Update
-                                    </button>
+                                    {canUpdateCourse && (
+                                        <button
+                                            className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 ${
+                                                telegramSource
+                                                    ? 'text-sky-700 dark:text-sky-300 hover:text-sky-900 dark:hover:text-sky-100 hover:bg-sky-50 dark:hover:bg-sky-500/10'
+                                                    : 'text-gray-700 dark:text-neutral-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/10'
+                                            }`}
+                                            onClick={(e) => {
+                                                if (telegramSource) handleSourceUpdate(e, telegramSource)
+                                                else handleSync(e)
+                                            }}
+                                            disabled={isSyncing}
+                                            title={updateButtonTitle}
+                                        >
+                                            <RefreshCw className={`w-3 h-3 ${isSyncing ? 'animate-spin' : ''}`} />
+                                            {isSyncing ? 'Syncing...' : updateButtonLabel}
+                                        </button>
+                                    )}
                                     <button
                                         className="w-full px-3 py-2 text-left text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 flex items-center gap-2"
                                         onClick={handleDelete}
