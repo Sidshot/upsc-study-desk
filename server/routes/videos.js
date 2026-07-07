@@ -33,6 +33,7 @@ function mapVideoRow(video) {
         youtubeId: video.youtube_id,
         url: video.url,
         hasTranscript: video.has_transcript === 1,
+        hasSummary: video.has_summary === 1,
         subtitleSources: JSON.parse(video.subtitle_sources || '[]'),
         type: video.type || 'video',
         sourceMetadata: JSON.parse(video.source_metadata || '{}')

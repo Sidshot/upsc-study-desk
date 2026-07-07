@@ -1,8 +1,11 @@
 import express from 'express'
 import { getDataDir } from '../database.js'
+import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
 
 const router = express.Router()
 const UPDATE_REPOSITORY = 'Sidshot/upsc-study-desk'
+
+router.use(requireTrustedDesktopSession)
 
 function updater() {
     return globalThis.omniUpdater || null
@@ -18,7 +21,7 @@ router.get('/info', (req, res) => {
     })
 })
 
-router.get('/update/status', (req, res) => {
+router.get('/update/status', requireTrustedDesktopSession, (req, res) => {
     const api = updater()
     if (!api) {
         return res.json({
@@ -33,7 +36,7 @@ router.get('/update/status', (req, res) => {
     res.json({ updateRepository: UPDATE_REPOSITORY, ...api.getStatus() })
 })
 
-router.post('/update/check', async (req, res) => {
+router.post('/update/check', requireTrustedDesktopSession, async (req, res) => {
     const api = updater()
     if (!api) {
         return res.status(503).json({ error: 'Desktop updater is not available in this runtime.' })
@@ -46,7 +49,7 @@ router.post('/update/check', async (req, res) => {
     }
 })
 
-router.post('/update/download', async (req, res) => {
+router.post('/update/download', requireTrustedDesktopSession, async (req, res) => {
     const api = updater()
     if (!api) {
         return res.status(503).json({ error: 'Desktop updater is not available in this runtime.' })
@@ -59,7 +62,7 @@ router.post('/update/download', async (req, res) => {
     }
 })
 
-router.post('/update/restart', (req, res) => {
+router.post('/update/restart', requireTrustedDesktopSession, (req, res) => {
     const api = updater()
     if (!api) {
         return res.status(503).json({ error: 'Desktop updater is not available in this runtime.' })

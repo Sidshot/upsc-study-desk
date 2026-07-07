@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Grid, List, SortAsc, ChevronDown, FolderOpen, Search, PlayCircle, BookOpen, Trophy } from 'lucide-react'
 import { getAllCourses, addCourse, addModule, addVideo, setInstructorAvatar, recalculateAllCoursesProgress } from '../utils/db'
 import { useSettings } from '../contexts/SettingsContext'
@@ -19,6 +20,7 @@ import {
 import * as api from '../utils/api'
 
 function HomePage() {
+    const navigate = useNavigate()
     const [courses, setCourses] = useState([])
     const [isLoading, setIsLoading] = useState(true)
     const [importData, setImportData] = useState(null)
@@ -529,7 +531,7 @@ function HomePage() {
 
                         {/* Continue Learning */}
                         {lastAccessedCourse && (
-                            <div className="p-5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 cursor-pointer" onClick={() => window.location.href = `/course/${lastAccessedCourse.id}`}>
+                            <div className="p-5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 cursor-pointer" onClick={() => navigate(`/course/${lastAccessedCourse.id}`)}>
                                 <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
                                     <PlayCircle className="w-6 h-6" />
                                 </div>

@@ -15,8 +15,11 @@ import { getOne, run } from '../database.js'
 import { scanCourseFolder } from '../services/courseScanner.js'
 import { repairPaths } from '../services/pathRepair.js'
 import { addAllowedRoot, setAllowedRoots } from '../services/videoStreamer.js'
+import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
 
 const router = express.Router()
+
+router.use(requireTrustedDesktopSession)
 
 // GET /api/fs/pick-folder
 // Opens a native OS folder picker and returns the selected path
@@ -68,7 +71,7 @@ router.post('/repair-paths', (req, res) => {
 
 // POST /api/fs/set-root
 // Updates the allowed root folder for video streaming
-router.post('/set-root', (req, res) => {
+router.post('/set-root', requireTrustedDesktopSession, (req, res) => {
     const { rootPath } = req.body
     if (!rootPath) {
         return res.status(400).json({ error: 'Missing rootPath' })

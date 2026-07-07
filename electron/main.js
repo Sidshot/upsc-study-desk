@@ -2,21 +2,27 @@ import { app, BrowserWindow, Menu } from 'electron'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import { createRequire } from 'module'
+import { randomBytes } from 'crypto'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const require = createRequire(import.meta.url)
 const { autoUpdater } = require('electron-updater')
+
 const updateState = {
     configured: false,
     checking: false,
+    downloading: false,
     updateAvailable: false,
     downloaded: false,
-    version: app.getVersion(),
+    currentVersion: app.getVersion(),
+    availableVersion: null,
     message: 'Updates are not checked yet.',
     error: null,
     technicalError: null,
     progress: null,
+    releaseDate: null,
+    lastCheckedAt: null,
 }
 
 function formatUpdaterError(err) {
@@ -49,40 +55,61 @@ function configureUpdater() {
 
     autoUpdater.on('checking-for-update', () => {
         updateState.checking = true
+        updateState.downloading = false
+        updateState.updateAvailable = false
+        updateState.downloaded = false
+        updateState.availableVersion = null
+        updateState.releaseDate = null
+        updateState.progress = null
         updateState.error = null
         updateState.technicalError = null
         updateState.message = 'Checking for updates...'
+        updateState.lastCheckedAt = new Date().toISOString()
     })
 
     autoUpdater.on('update-available', (info) => {
         updateState.checking = false
+        updateState.downloading = false
         updateState.updateAvailable = true
         updateState.downloaded = false
-        updateState.version = info.version || updateState.version
-        updateState.message = `Update ${updateState.version} is available.`
+        updateState.availableVersion = info.version || null
+        updateState.releaseDate = info.releaseDate || null
+        updateState.progress = null
+        updateState.message = `Version ${updateState.availableVersion || 'update'} is ready to download.`
     })
 
     autoUpdater.on('update-not-available', () => {
         updateState.checking = false
+        updateState.downloading = false
         updateState.updateAvailable = false
         updateState.downloaded = false
+        updateState.availableVersion = null
+        updateState.releaseDate = null
+        updateState.progress = null
         updateState.message = 'You are on the latest version.'
     })
 
     autoUpdater.on('download-progress', (progress) => {
+        updateState.checking = false
+        updateState.downloading = true
         updateState.progress = Math.round(progress.percent || 0)
-        updateState.message = `Downloading update... ${updateState.progress}%`
+        updateState.message = `Downloading version ${updateState.availableVersion || 'update'}... ${updateState.progress}%`
     })
 
     autoUpdater.on('update-downloaded', (info) => {
+        updateState.checking = false
+        updateState.downloading = false
         updateState.downloaded = true
-        updateState.version = info.version || updateState.version
-        updateState.message = 'Update downloaded. Restart to install.'
+        updateState.availableVersion = info.version || updateState.availableVersion
+        updateState.releaseDate = info.releaseDate || updateState.releaseDate
+        updateState.progress = 100
+        updateState.message = `Version ${updateState.availableVersion || 'update'} is ready. Restart Omni to install it.`
     })
 
     autoUpdater.on('error', (err) => {
         const formatted = formatUpdaterError(err)
         updateState.checking = false
+        updateState.downloading = false
         updateState.error = formatted.message
         updateState.technicalError = formatted.technicalError
         updateState.message = formatted.message
@@ -103,6 +130,7 @@ function configureUpdater() {
             } catch (err) {
                 const formatted = formatUpdaterError(err)
                 updateState.checking = false
+                updateState.downloading = false
                 updateState.error = formatted.message
                 updateState.technicalError = formatted.technicalError
                 updateState.message = formatted.message
@@ -115,9 +143,13 @@ function configureUpdater() {
             }
 
             try {
+                updateState.downloading = true
+                updateState.progress = 0
+                updateState.message = `Preparing version ${updateState.availableVersion || 'update'} for download...`
                 await autoUpdater.downloadUpdate()
             } catch (err) {
                 const formatted = formatUpdaterError(err)
+                updateState.downloading = false
                 updateState.error = formatted.message
                 updateState.technicalError = formatted.technicalError
                 updateState.message = formatted.message
@@ -128,6 +160,19 @@ function configureUpdater() {
     }
 }
 
+function attachDesktopSessionHeaders(session) {
+    const desktopToken = process.env.OMNI_LOCAL_API_TOKEN
+    if (!desktopToken) return
+
+    session.webRequest.onBeforeSendHeaders(
+        { urls: ['http://127.0.0.1:9474/*'] },
+        (details, callback) => {
+            details.requestHeaders['x-omni-session'] = desktopToken
+            callback({ requestHeaders: details.requestHeaders })
+        }
+    )
+}
+
 const startServer = async () => {
     // Static ES imports run before this file's body, so the server must be
     // imported dynamically after these production paths are available.
@@ -135,6 +180,7 @@ const startServer = async () => {
     process.env.OMNI_RESOURCES_PATH = process.resourcesPath
     process.env.OMNI_APP_PATH = app.getAppPath()
     process.env.OMNI_APP_VERSION = app.getVersion()
+    process.env.OMNI_LOCAL_API_TOKEN = randomBytes(32).toString('hex')
 
     await import('../server/index.js')
 }
@@ -148,9 +194,11 @@ const createWindow = () => {
         icon: path.join(__dirname, '../public/omni.ico'),
         webPreferences: {
             nodeIntegration: false,
-            contextIsolation: true
+            contextIsolation: true,
         }
     })
+
+    attachDesktopSessionHeaders(mainWindow.webContents.session)
 
     // Remove the default Electron menu bar for a cleaner app look
     Menu.setApplicationMenu(null)

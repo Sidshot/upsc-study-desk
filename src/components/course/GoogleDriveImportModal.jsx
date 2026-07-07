@@ -150,7 +150,7 @@ function GoogleDriveImportModal({ isOpen, onClose, onImport }) {
                             </button>
                         </div>
                         <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-1">
-                            Folder must be shared as "Anyone with the link can view"
+                            Folder must be shared as &quot;Anyone with the link can view&quot;
                         </p>
                     </div>
 

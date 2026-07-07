@@ -2,8 +2,11 @@ import express from 'express'
 import fs from 'fs'
 import path from 'path'
 import { getAll, getOne, run, transaction, getDataDir, getDb, saveDatabase } from '../database.js'
+import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
 
 const router = express.Router()
+
+router.use(requireTrustedDesktopSession)
 
 // GET /api/settings
 router.get('/', (req, res) => {
@@ -59,7 +62,7 @@ router.put('/', (req, res) => {
 })
 
 // DELETE /api/settings/reset
-router.delete('/reset', (req, res) => {
+router.delete('/reset', requireTrustedDesktopSession, (req, res) => {
     try {
         const db = getDb()
         db.run('PRAGMA foreign_keys = OFF')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     X, Sun, Moon, Monitor, Settings,
     FastForward, Check, Download, Upload, Database, AlertTriangle, KeyRound, Eye, EyeOff, ExternalLink, Sparkles, PictureInPicture, MessageSquare, Send, Bug, Lightbulb, MessageCircle
@@ -44,8 +44,6 @@ function SettingsModal({ isOpen, onClose }) {
     const [downloadingUpdate, setDownloadingUpdate] = useState(false)
     const { showNotification } = useNotification()
 
-    if (!isOpen) return null
-
     const tabs = [
         { id: 'general', label: 'General', icon: Settings },
         { id: 'shortcuts', label: 'Shortcuts', icon: FastForward },
@@ -60,6 +58,47 @@ function SettingsModal({ isOpen, onClose }) {
         setUpdateStatus(status)
         return status
     }
+
+    useEffect(() => {
+        if (!isOpen || activeTab !== 'help') return
+
+        let cancelled = false
+        let timerId = null
+
+        const syncStatus = async () => {
+            try {
+                const status = await api.get('/api/app/update/status')
+                if (cancelled) return
+
+                setUpdateStatus(status)
+                setCheckingUpdate(Boolean(status.checking))
+                setDownloadingUpdate(Boolean(status.downloading))
+
+                if (status.checking || status.downloading) {
+                    timerId = window.setTimeout(syncStatus, 1200)
+                }
+            } catch {
+                if (!cancelled) {
+                    timerId = window.setTimeout(syncStatus, 2500)
+                }
+            }
+        }
+
+        syncStatus()
+
+        return () => {
+            cancelled = true
+            if (timerId) window.clearTimeout(timerId)
+        }
+    }, [activeTab, isOpen])
+
+    const updateTone = useMemo(() => {
+        if (updateStatus?.error) return 'error'
+        if (updateStatus?.downloaded) return 'success'
+        if (updateStatus?.downloading || updateStatus?.checking) return 'info'
+        if (updateStatus?.updateAvailable) return 'warning'
+        return 'neutral'
+    }, [updateStatus])
 
     const checkForUpdates = async () => {
         try {
@@ -80,7 +119,7 @@ function SettingsModal({ isOpen, onClose }) {
             const status = await api.post('/api/app/update/download', {})
             setUpdateStatus(status)
             showNotification(status.message || 'Update download started', 'success')
-            setTimeout(refreshUpdateStatus, 1500)
+            setTimeout(refreshUpdateStatus, 800)
         } catch (err) {
             showNotification(err.message || 'Failed to download update', 'error')
         } finally {
@@ -95,6 +134,8 @@ function SettingsModal({ isOpen, onClose }) {
             showNotification(err.message || 'Failed to restart for update', 'error')
         }
     }
+
+    if (!isOpen) return null
 
     return (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
@@ -765,16 +806,50 @@ function SettingsModal({ isOpen, onClose }) {
                                             <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">
                                                 Update source: {updateStatus?.updateRepository || 'Sidshot/upsc-study-desk'}
                                             </p>
+                                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">
+                                                <span>Current version: {updateStatus?.currentVersion || 'Installed app only'}</span>
+                                                {updateStatus?.availableVersion && (
+                                                    <span>Available version: {updateStatus.availableVersion}</span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-light-text-secondary dark:text-dark-text-secondary mt-2">
                                                 {updateStatus?.message || 'Click Check for updates to ask the installed app for the latest release.'}
                                             </p>
+                                            {typeof updateStatus?.progress === 'number' && (
+                                                <div className="mt-3">
+                                                    <div className="h-2 rounded-full bg-black/5 dark:bg-white/10 overflow-hidden">
+                                                        <div
+                                                            className="h-full rounded-full bg-primary transition-all duration-300"
+                                                            style={{ width: `${Math.max(0, Math.min(100, updateStatus.progress))}%` }}
+                                                        />
+                                                    </div>
+                                                    <p className="text-[11px] text-light-text-secondary dark:text-dark-text-secondary mt-1">
+                                                        {updateStatus.progress}% downloaded
+                                                    </p>
+                                                </div>
+                                            )}
+                                            <div className={`mt-3 text-xs rounded-lg px-3 py-2 ${
+                                                updateTone === 'error'
+                                                    ? 'bg-red-500/10 text-red-600 dark:text-red-300'
+                                                    : updateTone === 'success'
+                                                        ? 'bg-green-500/10 text-green-700 dark:text-green-300'
+                                                        : updateTone === 'warning'
+                                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300'
+                                                            : 'bg-black/5 dark:bg-white/5 text-light-text-secondary dark:text-dark-text-secondary'
+                                            }`}>
+                                                {updateStatus?.downloaded
+                                                    ? 'The installer is ready. Restart Omni once and Windows will finish the update for the user.'
+                                                    : updateStatus?.updateAvailable
+                                                        ? 'Download the update here, then Omni will ask for one restart to complete installation.'
+                                                        : 'Checking is safe. User data stays where it is and is not replaced during the update.'}
+                                            </div>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-wrap gap-2 mt-4">
                                         <button
                                             onClick={checkForUpdates}
-                                            disabled={checkingUpdate}
+                                            disabled={checkingUpdate || downloadingUpdate}
                                             className="px-3 py-1.5 rounded-lg bg-primary text-primary-content hover:bg-primary-hover transition-colors text-xs font-medium disabled:opacity-60"
                                         >
                                             {checkingUpdate ? 'Checking...' : 'Check for updates'}
@@ -783,10 +858,10 @@ function SettingsModal({ isOpen, onClose }) {
                                         {updateStatus?.updateAvailable && !updateStatus?.downloaded && (
                                             <button
                                                 onClick={downloadUpdate}
-                                                disabled={downloadingUpdate}
+                                                disabled={downloadingUpdate || checkingUpdate}
                                                 className="px-3 py-1.5 rounded-lg border border-light-border dark:border-dark-border hover:bg-light-surface dark:hover:bg-dark-bg transition-colors text-xs font-medium disabled:opacity-60"
                                             >
-                                                {downloadingUpdate ? 'Downloading...' : 'Download update'}
+                                                {downloadingUpdate ? `Downloading${typeof updateStatus?.progress === 'number' ? ` ${updateStatus.progress}%` : '...'}` : 'Download update'}
                                             </button>
                                         )}
 

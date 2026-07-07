@@ -78,7 +78,7 @@ function CommandPalette({ isOpen, onClose, onOpenSettings }) {
                                     <MonitorPlay className="w-4 h-4 text-primary" />
                                 </div>
                                 <span className="text-gray-900 dark:text-white font-medium">
-                                    Search for "{localQuery}"
+                                    Search for &quot;{localQuery}&quot;
                                 </span>
                             </button>
                         </div>

@@ -83,7 +83,7 @@ function AISummaryPanel({ video, courseId, onSeek, onVideoDataChange, currentTim
                 try {
                     const videoData = await getVideo(video.id)
                     // In server mode, videoData just has flags, we must fetch the content
-                    if (videoData.has_transcript) {
+                    if (videoData.hasTranscript || videoData.has_transcript) {
                         const transcriptText = await fetch(`${SERVER_URL}/api/transcripts/${video.id}/text`).then(r => r.text())
                         setTranscript(transcriptText || null)
                         
@@ -100,7 +100,7 @@ function AISummaryPanel({ video, courseId, onSeek, onVideoDataChange, currentTim
                         setMissingCaptions(false)
                     }
                     
-                    if (videoData.has_summary) {
+                    if (videoData.hasSummary || videoData.has_summary) {
                         const summaryData = await get(`/api/summaries/${video.id}`)
                         setSummary(summaryData?.content || null)
                     } else {

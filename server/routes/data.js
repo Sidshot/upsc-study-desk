@@ -12,8 +12,11 @@ import express from 'express'
 import fs from 'fs'
 import { getAll, run, transaction, saveDatabase, getDb } from '../database.js'
 import { parseMp4Duration } from '../utils/mp4Parser.js'
+import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
 
 const router = express.Router()
+
+router.use(requireTrustedDesktopSession)
 
 // DELETE /api/data/reset
 // Wipes all user data from the database
@@ -51,11 +54,17 @@ router.delete('/reset', (req, res) => {
 
 // POST /api/data/download-image
 // Downloads an image from a URL and returns it as a Base64 string for offline storage
-router.post('/download-image', async (req, res) => {
+router.post('/download-image', requireTrustedDesktopSession, async (req, res) => {
     const { url } = req.body
     if (!url) return res.status(400).json({ error: 'Missing URL' })
 
     try {
+        const parsed = new URL(url)
+        const hostname = parsed.hostname.toLowerCase()
+        if (hostname === '127.0.0.1' || hostname === 'localhost' || hostname === '::1' || hostname === '[::1]') {
+            throw new Error('Loopback URLs are not allowed')
+        }
+
         const response = await fetch(url)
         if (!response.ok) throw new Error(`Failed to fetch image: ${response.status}`)
         
@@ -72,7 +81,7 @@ router.post('/download-image', async (req, res) => {
 
 // GET /api/data/export
 // Returns the full database contents as a JSON snapshot
-router.get('/export', (req, res) => {
+router.get('/export', requireTrustedDesktopSession, (req, res) => {
     try {
         const courses     = getAll('SELECT * FROM courses')
         const modules     = getAll('SELECT * FROM modules')
@@ -106,7 +115,7 @@ router.get('/export', (req, res) => {
 
 // POST /api/data/import
 // Restores data from a JSON snapshot (merges or replaces)
-router.post('/import', (req, res) => {
+router.post('/import', requireTrustedDesktopSession, (req, res) => {
     const data = req.body
     if (!data || typeof data !== 'object') {
         return res.status(400).json({ error: 'Invalid import data' })
@@ -228,7 +237,7 @@ router.post('/import', (req, res) => {
 
 // POST /api/data/detect-durations
 // Scans all videos with missing/zero durations and attempts to repair them
-router.post('/detect-durations', async (req, res) => {
+router.post('/detect-durations', requireTrustedDesktopSession, async (req, res) => {
     try {
         const videos = getAll(
             `SELECT id, file_path, duration, course_id

@@ -26,7 +26,31 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
 
     if (!isOpen) return null
 
+    function parseYouTubeTarget(rawUrl) {
+        let urlObj
+        try {
+            urlObj = new URL(rawUrl)
+        } catch {
+            throw new Error('Invalid YouTube URL')
+        }
 
+        let type = 'video'
+        let id = ''
+
+        if (urlObj.searchParams.has('list')) {
+            type = 'playlist'
+            id = urlObj.searchParams.get('list')
+        } else if (urlObj.searchParams.has('v')) {
+            type = 'video'
+            id = urlObj.searchParams.get('v')
+        } else if (urlObj.hostname === 'youtu.be') {
+            type = 'video'
+            id = urlObj.pathname.slice(1)
+        }
+
+        if (!id) throw new Error('Invalid YouTube URL')
+        return { type, id }
+    }
 
     async function handleFetchInfo() {
         if (!url) return
@@ -35,23 +59,7 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
         setPreviewData(null)
 
         try {
-            // Detect Type
-            let type = 'video'
-            let id = ''
-
-            const urlObj = new URL(url)
-            if (urlObj.searchParams.has('list')) {
-                type = 'playlist'
-                id = urlObj.searchParams.get('list')
-            } else if (urlObj.searchParams.has('v')) {
-                type = 'video'
-                id = urlObj.searchParams.get('v')
-            } else if (urlObj.hostname === 'youtu.be') {
-                type = 'video'
-                id = urlObj.pathname.slice(1)
-            }
-
-            if (!id) throw new Error('Invalid YouTube URL')
+            const { type, id } = parseYouTubeTarget(url.trim())
             setImportType(type)
 
             if (type === 'video') {
@@ -193,7 +201,6 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
             }
 
         } catch (err) {
-            console.error(err)
             setError(err.message)
         } finally {
             setIsLoading(false)
