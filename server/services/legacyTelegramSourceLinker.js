@@ -1,5 +1,6 @@
 import { getAll, getOne, runInTransaction, transaction } from '../database.js'
 import { createId, nowIso, safeJsonParse } from './sourceUtils.js'
+import { inferMediaType } from './mediaTypeInference.js'
 
 function parseTelegramStreamUrl(url = '') {
     const match = String(url).match(/\/api\/telegram\/stream\/([^/?#]+)\/(\d+)/)
@@ -10,11 +11,12 @@ function parseTelegramStreamUrl(url = '') {
     }
 }
 
+function canonicalTelegramStreamUrl({ chatId, messageId }) {
+    return `/api/telegram/stream/${encodeURIComponent(chatId)}/${encodeURIComponent(messageId)}`
+}
+
 function mediaTypeForVideo(row) {
-    if (row.type) return row.type
-    if (row.mime_type?.startsWith?.('image/')) return 'image'
-    if (row.mime_type === 'application/pdf' || row.file_name?.toLowerCase?.().endsWith('.pdf')) return 'pdf'
-    return 'video'
+    return inferMediaType(row, 'video')
 }
 
 function sourceCapabilities() {
@@ -168,13 +170,10 @@ export function linkLegacyTelegramImports() {
             v.url,
             v.type,
             v.source_metadata
-        FROM courses c
-        JOIN videos v ON v.course_id = c.id
+        FROM videos v
+        LEFT JOIN courses c ON c.id = v.course_id
         LEFT JOIN modules m ON m.id = v.module_id
-        LEFT JOIN imported_items ii ON ii.video_id = v.id
-        WHERE c.source_type = 'telegram'
-          AND v.url LIKE '%/api/telegram/stream/%'
-          AND ii.id IS NULL
+        WHERE v.url LIKE '%/api/telegram/stream/%'
         ORDER BY c.id, v."order" ASC
     `)
 
@@ -201,6 +200,8 @@ export function linkLegacyTelegramImports() {
     }
 
     let linked = 0
+    let normalized = 0
+    let metadataUpdated = 0
     const now = nowIso()
 
     transaction(() => {
@@ -211,13 +212,21 @@ export function linkLegacyTelegramImports() {
         for (const { row, parsed } of linkableRows) {
             const sourceId = `source_telegram_${parsed.chatId}`
             const sourceItemKey = `${parsed.chatId}:main:${parsed.messageId}`
-            const importedItemId = `imported_legacy_${row.video_id}`
+            const existingImport = getOne(
+                'SELECT id FROM imported_items WHERE source_id = ? AND source_item_key = ? LIMIT 1',
+                [sourceId, sourceItemKey]
+            ) || getOne(
+                'SELECT id FROM imported_items WHERE video_id = ? LIMIT 1',
+                [row.video_id]
+            )
+            const importedItemId = existingImport?.id || `imported_legacy_${row.video_id}`
             const mediaType = mediaTypeForVideo(row)
             const existingMetadata = safeJsonParse(row.source_metadata, {})
             const sourceName = sourceStats.get(parsed.chatId)?.title || row.course_title || 'Telegram Source'
+            const canonicalUrl = canonicalTelegramStreamUrl(parsed)
             const metadata = {
                 ...existingMetadata,
-                url: row.url,
+                url: canonicalUrl,
                 legacyLinked: true,
                 schemaVersion: 1,
                 sourceId,
@@ -230,6 +239,7 @@ export function linkLegacyTelegramImports() {
                     messageId: parsed.messageId,
                 },
             }
+            delete metadata.legacyOriginalUrl
 
             runInTransaction(`
                 INSERT INTO imported_items (
@@ -238,10 +248,18 @@ export function linkLegacyTelegramImports() {
                     file_name, file_size, duration, thumbnail_data, metadata_json,
                     lifecycle_state, created_at, updated_at
                 ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(source_id, source_item_key) DO UPDATE SET
+                ON CONFLICT(id) DO UPDATE SET
+                    source_id = excluded.source_id,
+                    source_item_key = excluded.source_item_key,
                     course_id = COALESCE(imported_items.course_id, excluded.course_id),
                     module_id = COALESCE(imported_items.module_id, excluded.module_id),
                     video_id = COALESCE(imported_items.video_id, excluded.video_id),
+                    title = excluded.title,
+                    description = excluded.description,
+                    media_type = excluded.media_type,
+                    file_name = excluded.file_name,
+                    file_size = excluded.file_size,
+                    duration = excluded.duration,
                     metadata_json = excluded.metadata_json,
                     lifecycle_state = 'available',
                     updated_at = excluded.updated_at
@@ -267,9 +285,27 @@ export function linkLegacyTelegramImports() {
                 now,
             ])
 
-            runInTransaction('UPDATE videos SET source_metadata = ? WHERE id = ?', [
-                JSON.stringify(metadata),
+            const nextMetadata = JSON.stringify(metadata)
+            runInTransaction('UPDATE videos SET url = ?, source_metadata = ?, type = ? WHERE id = ?', [
+                canonicalUrl,
+                nextMetadata,
+                mediaType,
                 row.video_id,
+            ])
+
+            if (row.url !== canonicalUrl) {
+                normalized += 1
+            }
+            if (row.source_metadata !== nextMetadata) {
+                metadataUpdated += 1
+            }
+
+            runInTransaction('UPDATE imported_items SET metadata_json = ?, media_type = ?, lifecycle_state = ?, updated_at = ? WHERE id = ?', [
+                JSON.stringify(metadata),
+                mediaType,
+                'available',
+                now,
+                importedItemId,
             ])
 
             upsertMetadataAndSearch({
@@ -287,5 +323,5 @@ export function linkLegacyTelegramImports() {
     })
 
     const linkedSources = getOne('SELECT COUNT(*) AS count FROM sources WHERE type = ? AND id LIKE ?', ['telegram', 'source_telegram_%'])?.count || 0
-    return { linked, sources: linkedSources, skipped: rows.length - linked }
+    return { linked, normalized, metadataUpdated, sources: linkedSources, skipped: rows.length - linked }
 }

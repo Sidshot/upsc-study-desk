@@ -31,6 +31,63 @@ function isDirectStreamUrl(url) {
     )
 }
 
+function isTelegramStreamUrl(url) {
+    return typeof url === 'string' && url.includes('/api/telegram/stream/')
+}
+
+function isYouTubeVideo(video) {
+    return !!(video?.youtubeId ||
+        (typeof video?.url === 'string' && (video.url.includes('youtube.com') || video.url.includes('youtu.be'))))
+}
+
+function isDriveVideo(video) {
+    return !!(video?.driveFileId ||
+        (typeof video?.url === 'string' && video.url.includes('drive.google.com')))
+}
+
+function isFinitePositiveDuration(value) {
+    return Number.isFinite(value) && value > 0
+}
+
+function looksLikeUnsupportedChromiumContainer(video) {
+    const values = [
+        video?.fileName,
+        video?.title,
+        video?.url,
+        video?.sourceMetadata?.fileName,
+        video?.sourceMetadata?.raw?.fileName,
+    ]
+        .filter(Boolean)
+        .map(value => String(value).toLowerCase())
+
+    return values.some(value => value.includes('.mkv'))
+}
+
+function telegramPlaybackErrorMessage(video) {
+    if (looksLikeUnsupportedChromiumContainer(video)) {
+        return 'This Telegram lecture is an MKV file, which Chromium cannot play directly inside Omni yet. Use a source update or convert/download it as MP4 (H.264) for in-app playback.'
+    }
+    return 'This Telegram lecture could not be decoded by the built-in player. The link was restored, but Telegram may be serving an unsupported container/codec. Try Update Telegram; if it is MKV, convert/download as MP4 (H.264).'
+}
+
+function telegramStreamErrorMessage(message = '') {
+    const normalized = String(message).toLowerCase()
+    if (
+        normalized.includes('auth_key_unregistered') ||
+        normalized.includes('not initialised') ||
+        normalized.includes('client not') ||
+        normalized.includes('credentials') ||
+        normalized.includes('session') ||
+        normalized.includes('telegram-auth')
+    ) {
+        return 'Telegram is not connected in this Omni install. Reconnect Telegram in Settings, then use Update Telegram for this course.'
+    }
+    if (normalized.includes('message not found') || normalized.includes('media not found')) {
+        return 'This Telegram message is no longer available from the connected account. Use Update Telegram to refresh the course.'
+    }
+    return message || 'Telegram stream could not be opened. Check Telegram connection and try Update Telegram.'
+}
+
 function NonVideoResourceViewer({ video, fileUrl, onReady }) {
     useEffect(() => {
         onReady?.()
@@ -109,6 +166,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [showControls, setShowControls] = useState(true)
     const [isLoading, setIsLoading] = useState(true)
+    const [isBuffering, setIsBuffering] = useState(false)
     const [error, setError] = useState(null)
     const [playbackSpeed, setPlaybackSpeed] = useState(() => settings.playbackSpeed)
     const [showSpeedMenu, setShowSpeedMenu] = useState(false)
@@ -271,6 +329,8 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         }
         setIsPlaying(false)
         setIsLoading(true)
+        setIsBuffering(false)
+        setError(null)
 
         // Store autoplay intent — actual play() deferred to handleLoadedMetadata
         pendingAutoPlayRef.current = !!(video?.id && autoPlay)
@@ -343,6 +403,34 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
         // Handle direct stream URLs (absolute or same-origin relative).
         if (isDirectStreamUrl(video.url)) {
+            if (looksLikeUnsupportedChromiumContainer(video)) {
+                setError(telegramPlaybackErrorMessage(video))
+                setIsLoading(false)
+                setIsBuffering(false)
+                return
+            }
+            if (isTelegramStreamUrl(video.url)) {
+                try {
+                    setIsLoading(true)
+                    const response = await fetch(video.url, { method: 'HEAD' })
+                    if (!response.ok) {
+                        let message = response.headers.get('X-Omni-Stream-Error') || response.statusText
+                        try {
+                            const text = await response.text()
+                            const payload = JSON.parse(text)
+                            message = payload.error || message
+                        } catch {
+                            // HEAD responses may not include a parseable body.
+                        }
+                        throw new Error(message)
+                    }
+                } catch (err) {
+                    setError(telegramStreamErrorMessage(err.message))
+                    setIsLoading(false)
+                    setIsBuffering(false)
+                    return
+                }
+            }
             setVideoUrl(video.url)
             setIsLoading(true)
             setDuration(video.duration || 0)
@@ -400,6 +488,8 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             const detectedDuration = videoRef.current.duration
             setDuration(detectedDuration)
             setIsLoading(false)
+            setIsBuffering(false)
+            setError(null)
 
             // Report actual video dimensions so the parent can size the container
             // correctly for any aspect ratio (4:3, 21:9, portrait, etc.)
@@ -426,8 +516,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             }
 
             // Ensure playback speed is applied to new source
-            const isYt = video?.youtubeId || video?.url?.startsWith('http')
-            if (!isYt) {
+            if (!isYouTubeVideo(video)) {
                 videoRef.current.playbackRate = isSpeedBoosting ? 2 : playbackSpeed
             }
 
@@ -448,6 +537,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     function handleTimeUpdate() {
         if (videoRef.current) {
+            setIsBuffering(false)
             const now = Date.now()
             // Throttle to 1 update per second to prevent React re-render freezes
             if (now - lastTimeUpdateRef.current > 1000) {
@@ -463,8 +553,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     useImperativeHandle(ref, () => ({
         seekTo: (time) => {
             if (videoRef.current) {
-                const isYt = video?.youtubeId || video?.url?.includes('youtube.com') || video?.url?.includes('youtu.be')
-                if (isYt && videoRef.current.contentWindow) {
+                if (isYouTubeVideo(video) && videoRef.current.contentWindow) {
                     videoRef.current.contentWindow.postMessage(JSON.stringify({
                         event: 'command',
                         func: 'seekTo',
@@ -574,8 +663,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         if (!videoRef.current || !video) return
 
         try {
-            const isEmbedded = video?.youtubeId || video?.driveFileId || 
-                (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be') || video.url.includes('drive.google.com')))
+            const isEmbedded = isYouTubeVideo(video) || isDriveVideo(video)
             const currentT = isEmbedded ? currentTimeRef.current : videoRef.current.currentTime
             const currentD = isEmbedded ? durationRef.current : videoRef.current.duration
 
@@ -602,12 +690,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     // Controls
     function togglePlay() {
-        const isYt = video?.youtubeId || (
-            typeof video?.url === 'string' &&
-            (video.url.includes('youtube.com') || video.url.includes('youtu.be'))
-        )
-
-        if (isYt) {
+        if (isYouTubeVideo(video)) {
             setIsPlaying(prev => !prev)
             return
         }
@@ -619,16 +702,19 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     function handleSeek(e) {
         if (!progressRef.current || !videoRef.current) return
+        if (!isFinitePositiveDuration(duration)) {
+            setIsBuffering(isLoading)
+            return
+        }
 
         const rect = progressRef.current.getBoundingClientRect()
         const percent = (e.clientX - rect.left) / rect.width
         const newTime = percent * duration
 
-        const isYt = video?.youtubeId || video?.url?.startsWith('http')
-
-        if (isYt) {
+        if (isYouTubeVideo(video)) {
             videoRef.current.seekTo(newTime)
         } else {
+            setIsBuffering(true)
             videoRef.current.currentTime = newTime
         }
         setCurrentTime(newTime)
@@ -639,8 +725,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         setVolume(newVolume)
         setIsMuted(newVolume === 0)
 
-        const isYt = video?.youtubeId || video?.url?.startsWith('http')
-        if (videoRef.current && !isYt) {
+        if (videoRef.current && !isYouTubeVideo(video)) {
             videoRef.current.volume = newVolume
         }
         updateSettings({ volume: newVolume })
@@ -648,13 +733,11 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     function toggleMute() {
         if (videoRef.current) {
-            const isYt = video?.youtubeId || video?.url?.startsWith('http')
-
             if (isMuted) {
-                if (!isYt) videoRef.current.volume = volume || 0.75
+                if (!isYouTubeVideo(video)) videoRef.current.volume = volume || 0.75
                 setIsMuted(false)
             } else {
-                if (!isYt) videoRef.current.volume = 0
+                if (!isYouTubeVideo(video)) videoRef.current.volume = 0
                 setIsMuted(true)
             }
         }
@@ -676,8 +759,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         setPlaybackSpeed(speed)
         updateSettings({ playbackSpeed: speed })
         
-        const isYt = video?.youtubeId || video?.url?.startsWith('http')
-        if (videoRef.current && !isYt) {
+        if (videoRef.current && !isYouTubeVideo(video)) {
             videoRef.current.playbackRate = speed
         }
         setShowSpeedMenu(false)
@@ -722,10 +804,8 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     //   messages that include currentTime when we send a 'listening' cmd.
     // Drive: no JS API available — use a simple elapsed-time counter.
     useEffect(() => {
-        const isYouTube = !!(video?.youtubeId ||
-            (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be'))))
-        const isDrive = !!(video?.driveFileId ||
-            (video?.url && video.url.includes('drive.google.com')))
+        const isYouTube = isYouTubeVideo(video)
+        const isDrive = isDriveVideo(video)
 
         if (!isYouTube && !isDrive) return
 
@@ -802,7 +882,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             if (!e.shiftKey && !e.ctrlKey && key >= '0' && key <= '9') {
                 e.preventDefault()
                 const percent = parseInt(key) * 10
-                if (videoRef.current && duration) {
+                if (videoRef.current && isFinitePositiveDuration(duration)) {
                     videoRef.current.currentTime = (percent / 100) * duration
                 }
                 return
@@ -822,7 +902,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     break
                 case 'arrowright':
                     e.preventDefault()
-                    if (videoRef.current) {
+                    if (videoRef.current && isFinitePositiveDuration(duration)) {
                         videoRef.current.currentTime = Math.min(duration, currentTime + 5)
                     }
                     break
@@ -834,7 +914,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     break
                 case 'l':
                     e.preventDefault()
-                    if (videoRef.current) {
+                    if (videoRef.current && isFinitePositiveDuration(duration)) {
                         videoRef.current.currentTime = Math.min(duration, currentTime + 10)
                     }
                     break
@@ -996,9 +1076,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         if (!videoRef.current || !videoUrl) return
         
         // Skip for YouTube/Drive (they handle autoplay via URL params)
-        const isYt = video?.youtubeId || (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')))
-        const isDrive = video?.driveFileId || video?.url?.includes('drive.google.com')
-        if (isYt || isDrive) return
+        if (isYouTubeVideo(video) || isDriveVideo(video)) return
 
         if (isPlaying) {
             const playPromise = videoRef.current.play()
@@ -1023,8 +1101,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
     // Sync playback speed with video element
     useEffect(() => {
-        const isYt = video?.youtubeId || video?.url?.startsWith('http')
-        if (!isYt) {
+        if (!isYouTubeVideo(video)) {
             const rate = isSpeedBoosting ? 2 : playbackSpeed
             if (videoRef.current) videoRef.current.playbackRate = rate
             // [DUB FEATURE HIDDEN] if (dubAudioRef.current) dubAudioRef.current.playbackRate = rate
@@ -1128,7 +1205,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                 setSpeedBeforeBoost(playbackSpeed)
                 setPlaybackSpeed(2)
                 setIsSpeedBoosting(true)
-                if (videoRef.current && !(video?.youtubeId || video?.url?.startsWith('http'))) {
+                if (videoRef.current && !isYouTubeVideo(video)) {
                     videoRef.current.playbackRate = 2
                 }
             }
@@ -1148,7 +1225,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             setIsSpeedBoosting(false)
             // Set flag to prevent click from pausing video
             wasSpeedBoostingRef.current = true
-            if (videoRef.current && !(video?.youtubeId || video?.url?.startsWith('http'))) {
+            if (videoRef.current && !isYouTubeVideo(video)) {
                 videoRef.current.playbackRate = speedBeforeBoost
             }
         }
@@ -1168,8 +1245,11 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     // YouTube and Google Drive videos are embedded in cross-origin iframes
     // whose play/pause/seek/volume can't be controlled from outside.
     // We still show Omni's prev/next, fullscreen, settings, and captions controls.
-    const isEmbeddedPlayer = !!(isDocumentLike(video?.type) || video?.youtubeId || video?.driveFileId ||
-        (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be') || video.url.includes('drive.google.com'))))
+    const isEmbeddedPlayer = !!(isDocumentLike(video?.type) || isYouTubeVideo(video) || isDriveVideo(video))
+    const canSeekNativeVideo = Boolean(videoRef.current && isFinitePositiveDuration(duration) && !isEmbeddedPlayer)
+    const progressPercent = isFinitePositiveDuration(duration)
+        ? Math.max(0, Math.min(100, (currentTime / duration) * 100))
+        : 0
 
     return (
         <div
@@ -1183,7 +1263,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             onTouchEnd={handleSpeedBoostEnd}
         >
             {/* YouTube iframe */}
-            {(video?.youtubeId || (video?.url && (video.url.includes('youtube.com') || video.url.includes('youtu.be')))) ? (
+            {isYouTubeVideo(video) ? (
                 <div className="w-full h-full relative z-10">
                     {/* YouTube Embed using native iframe with YouTube's built-in controls */}
                     <iframe
@@ -1211,7 +1291,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                         }}
                     />
                 </div>
-            ) : (video?.driveFileId || video?.url?.includes('drive.google.com')) ? (
+            ) : isDriveVideo(video) ? (
                 <div className="w-full h-full relative z-10">
                     {/* Google Drive Embed using native iframe with Drive's built-in player */}
                     <iframe
@@ -1278,6 +1358,18 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     onPlay={handlePlay}
                     onPause={handlePause}
                     onEnded={handleEnded}
+                    onWaiting={() => setIsBuffering(true)}
+                    onStalled={() => setIsBuffering(true)}
+                    onSeeking={() => setIsBuffering(true)}
+                    onSeeked={() => setIsBuffering(false)}
+                    onCanPlay={() => {
+                        setIsLoading(false)
+                        setIsBuffering(false)
+                    }}
+                    onPlaying={() => {
+                        setIsLoading(false)
+                        setIsBuffering(false)
+                    }}
                     onClick={handleVideoClick}
                     onError={(e) => {
                         // For .ts files, mpegts.js manages playback via MSE —
@@ -1299,7 +1391,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                                     errorMessage = 'Video codec not supported. Try converting to MP4 (H.264) format using HandBrake or FFmpeg.'
                                     break
                                 case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
-                                    errorMessage = 'Video format not supported. Try converting to MP4 (H.264) or WebM format.'
+                                    errorMessage = isDirectStreamUrl(video?.url)
+                                        ? telegramPlaybackErrorMessage(video)
+                                        : 'Video format not supported. Try converting to MP4 (H.264) or WebM format.'
                                     break
                                 default:
                                     errorMessage = 'Unknown video error occurred.'
@@ -1308,6 +1402,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
 
                         setError(errorMessage)
                         setIsLoading(false)
+                        setIsBuffering(false)
                     }}
                 >
                 </video>
@@ -1324,9 +1419,14 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             )}
 
             {/* Loading Overlay */}
-            {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                    <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            {(isLoading || isBuffering) && !error && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white">
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="text-sm font-medium tracking-wide">
+                            {isBuffering ? 'Buffering...' : 'Loading video...'}
+                        </div>
+                    </div>
                 </div>
             )}
 
@@ -1376,16 +1476,17 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     {!isEmbeddedPlayer && (
                     <div
                         ref={progressRef}
-                        className="relative h-1 bg-white/30 cursor-pointer mx-4 mb-2 group/progress pointer-events-auto"
+                        className={`relative h-1 bg-white/30 mx-4 mb-2 group/progress pointer-events-auto ${canSeekNativeVideo ? 'cursor-pointer' : 'cursor-wait opacity-70'}`}
                         onClick={handleSeek}
+                        title={canSeekNativeVideo ? 'Seek' : 'Loading video metadata...'}
                     >
                         <div
                             className="absolute inset-y-0 left-0 bg-[var(--primary-fg)]"
-                            style={{ width: `${(currentTime / duration) * 100}%` }}
+                            style={{ width: `${progressPercent}%` }}
                         />
                         <div
                             className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[var(--primary-fg)] rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity"
-                            style={{ left: `${(currentTime / duration) * 100}%`, marginLeft: '-6px' }}
+                            style={{ left: `${progressPercent}%`, marginLeft: '-6px' }}
                         />
                     </div>
                     )}

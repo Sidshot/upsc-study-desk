@@ -13,6 +13,8 @@ import fs from 'fs'
 import { getAll, run, transaction, saveDatabase, getDb } from '../database.js'
 import { parseMp4Duration } from '../utils/mp4Parser.js'
 import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
+import { linkLegacyTelegramImports } from '../services/legacyTelegramSourceLinker.js'
+import { inferMediaType, repairRestoredMediaTypes } from '../services/mediaTypeInference.js'
 
 const router = express.Router()
 
@@ -142,6 +144,8 @@ router.post('/import', requireTrustedDesktopSession, (req, res) => {
                         // Strip surrounding double-quotes for key lookup (e.g. '"order"' → 'order')
                         const key = c.replace(/^"|"$/g, '')
                         const v = row[key]
+                        if (v === undefined && table === 'videos' && key === 'type') return inferMediaType(row, 'video')
+                        if (v === undefined && table === 'videos' && key === 'source_metadata') return '{}'
                         return v === undefined ? null : v
                     })
                     db.run(
@@ -175,7 +179,8 @@ router.post('/import', requireTrustedDesktopSession, (req, res) => {
                     'is_required','is_completed','is_favorite','watch_progress',
                     'last_watched_position','last_watched_at','completed_at','watch_count',
                     'tags','bookmarks','youtube_id','url','has_transcript','has_summary',
-                    'transcript_generated_at','summary_generated_at','subtitle_sources'
+                    'transcript_generated_at','summary_generated_at','subtitle_sources',
+                    'type','source_metadata'
                 ])
             }
             if (data.notes) {
@@ -229,7 +234,10 @@ router.post('/import', requireTrustedDesktopSession, (req, res) => {
         }
 
         saveDatabase()
-        res.json({ success: true })
+        const telegramRepair = linkLegacyTelegramImports()
+        const mediaTypeRepair = repairRestoredMediaTypes()
+        saveDatabase()
+        res.json({ success: true, telegramRepair, mediaTypeRepair })
     } catch (err) {
         res.status(500).json({ error: err.message })
     }

@@ -496,7 +496,7 @@ export async function scanMessages(chatId, options = {}) {
  * @param {string}   range  - Raw HTTP Range header (e.g. "bytes=0-1048575")
  * @param {Response} res    - Express response object (we write directly)
  */
-export async function streamMedia(chatId, msgId, range, res) {
+export async function streamMedia(chatId, msgId, range, res, options = {}) {
     if (!client) throw new Error('Client not initialised')
 
     let entity
@@ -528,9 +528,11 @@ export async function streamMedia(chatId, msgId, range, res) {
     }
     if (fileName.toLowerCase().endsWith('.pdf')) {
         mimeType = 'application/pdf'
+    } else if (fileName.toLowerCase().endsWith('.mkv')) {
+        mimeType = 'video/x-matroska'
     } else if (fileName.toLowerCase().endsWith('.mp4') || mimeType === 'application/octet-stream') {
         mimeType = 'video/mp4'
-    } else if (fileName.toLowerCase().endsWith('.webm') || fileName.toLowerCase().endsWith('.mkv')) {
+    } else if (fileName.toLowerCase().endsWith('.webm')) {
         mimeType = 'video/webm'
     }
 
@@ -571,6 +573,11 @@ export async function streamMedia(chatId, msgId, range, res) {
     } else {
         headers['Content-Length'] = fileSize
         res.writeHead(200, headers)
+    }
+
+    if (options.headOnly) {
+        res.end()
+        return
     }
 
     // ── Stream chunks to the response ───────────────────────────────────

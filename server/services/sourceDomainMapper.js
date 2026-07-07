@@ -1,11 +1,16 @@
 import { createId } from './sourceUtils.js'
+import { inferMediaType } from './mediaTypeInference.js'
 
 const SCHEMA_VERSION = 1
 
 function mediaTypeOf(discovery) {
-    const kind = discovery.mediaKind || discovery.media_type || 'other'
-    if (['video', 'pdf', 'image', 'audio', 'document', 'other'].includes(kind)) return kind
-    return 'other'
+    return inferMediaType({
+        type: discovery.mediaKind || discovery.media_type,
+        mimeType: discovery.mimeType,
+        fileName: discovery.fileName,
+        title: discovery.title,
+        metadata: { raw: discovery.raw || {} },
+    }, 'other')
 }
 
 function telegramUrl(discovery) {
@@ -14,6 +19,17 @@ function telegramUrl(discovery) {
     const messageId = raw.id || raw.messageId
     if (!chatId || !messageId) return null
     return `/api/telegram/stream/${encodeURIComponent(chatId)}/${encodeURIComponent(messageId)}`
+}
+
+function telegramMetadata(discovery) {
+    const raw = discovery.raw || {}
+    const chatId = raw.chatId
+    const messageId = raw.id || raw.messageId
+    if (!chatId || !messageId) return null
+    return {
+        chatId: String(chatId),
+        messageId: Number(messageId),
+    }
 }
 
 function sourceUrl(source, discovery) {
@@ -38,6 +54,8 @@ export function discoveryToOmniImportItem(source, discovery) {
         raw: discovery.raw || {},
         url: sourceUrl(source, discovery),
     }
+    const telegram = source.type === 'telegram' ? telegramMetadata(discovery) : null
+    if (telegram) metadata.telegram = telegram
 
     return {
         schemaVersion: SCHEMA_VERSION,

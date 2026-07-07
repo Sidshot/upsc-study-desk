@@ -398,7 +398,7 @@ router.put('/rules/:chatId', async (req, res) => {
  * Streams the video media directly to the response (supports Range requests).
  * This endpoint does NOT return JSON — the service writes raw bytes to `res`.
  */
-router.get('/stream/:chatId/:msgId', async (req, res) => {
+async function handleStream(req, res, options = {}) {
     try {
         await requireClient(req)
         await tg.streamMedia(
@@ -406,13 +406,20 @@ router.get('/stream/:chatId/:msgId', async (req, res) => {
             Number(req.params.msgId),
             req.headers.range,
             res,
+            options,
         )
     } catch (err) {
         console.error('[Telegram] /stream error:', err.message)
         if (!res.headersSent) {
-            res.status(500).json({ error: err.message })
+            const message = err.message || 'Telegram stream failed'
+            const isAuthError = /AUTH_KEY_UNREGISTERED|SESSION|not initialised|credentials/i.test(message)
+            res.set('X-Omni-Stream-Error', isAuthError ? 'telegram-auth' : 'telegram-stream')
+            res.status(isAuthError ? 401 : 500).json({ error: message })
         }
     }
-})
+}
+
+router.head('/stream/:chatId/:msgId', (req, res) => handleStream(req, res, { headOnly: true }))
+router.get('/stream/:chatId/:msgId', handleStream)
 
 export default router

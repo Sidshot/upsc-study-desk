@@ -18,6 +18,8 @@ import { initDatabase, closeDatabase, getDb, getDataDir, getAll, getOne, run, tr
 import { streamVideo, setAllowedRoots, addAllowedRoot } from './services/videoStreamer.js'
 import { repairPaths } from './services/pathRepair.js'
 import { parseMp4Duration } from './utils/mp4Parser.js'
+import { linkLegacyTelegramImports } from './services/legacyTelegramSourceLinker.js'
+import { repairRestoredMediaTypes } from './services/mediaTypeInference.js'
 import coursesRouter from './routes/courses.js'
 import modulesRouter from './routes/modules.js'
 import videosRouter from './routes/videos.js'
@@ -77,7 +79,7 @@ function resolveFrontendDistPath() {
 // ============================================
 
 const ALLOWED_ORIGIN_HOSTS = new Set(['127.0.0.1', 'localhost', '[::1]'])
-const ALLOWED_ORIGIN_PORTS = new Set(['9474', '5173', ''])
+const ALLOWED_ORIGIN_PORTS = new Set(['9474', '5173', '4173', '3000', ''])
 
 function isAllowedLocalOrigin(origin) {
     try {
@@ -190,6 +192,17 @@ async function start() {
         repairPaths()
     } catch (err) {
         console.error('[PathRepair] Error:', err.message)
+    }
+
+    try {
+        const telegramRepair = linkLegacyTelegramImports()
+        const mediaTypeRepair = repairRestoredMediaTypes()
+        if (telegramRepair.normalized || telegramRepair.metadataUpdated || mediaTypeRepair.updated) {
+            saveDatabase()
+            console.log('[StartupRepair]', { telegramRepair, mediaTypeRepair })
+        }
+    } catch (err) {
+        console.error('[StartupRepair] Error:', err.message)
     }
 
     // The desktop UI and API client both use this fixed local port.
