@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Menu, Radio, RefreshCw, Trash2 } from 'lucide-react'
+import { ChevronLeft, Radio, RefreshCw, Trash2 } from 'lucide-react'
 import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree, deleteCourse } from '../utils/db'
 import { getSourcesByCourse } from '../utils/sources'
 import { useSettings } from '../contexts/SettingsContext'
@@ -124,6 +124,7 @@ function CoursePlayerPage() {
     // Load course data (reload when progress calculation mode changes)
     useEffect(() => {
         loadCourseData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [courseId])
 
     // Refresh only course progress when calculation mode changes (don't interrupt video)
@@ -139,6 +140,7 @@ function CoursePlayerPage() {
             }, 500)
             return () => clearTimeout(timer)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [settings.progressCalculationMode])
 
     // Lightweight refresh - only updates course progress without affecting video
@@ -319,9 +321,10 @@ function CoursePlayerPage() {
                     .catch(err => console.log('Notice: Could not auto-fetch YouTube transcript:', err.message))
             })
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentVideo?.id, currentVideo?.hasTranscript])
 
-    function handleVideoComplete(videoId) {
+    function handleVideoComplete() {
         // Lightweight refresh - only updates sidebar, doesn't reload video player
         refreshModulesOnly()
     }
@@ -406,7 +409,7 @@ function CoursePlayerPage() {
                             }
                             innerCtx.drawImage(canvas, 0, 0)
                         }
-                    } catch (err) {
+                    } catch (e) {
                         // Ignore cross-origin errors if any
                     }
                 }

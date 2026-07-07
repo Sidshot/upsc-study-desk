@@ -34,7 +34,7 @@ export async function getRootHandle() {
                     } else {
                         resolve(null);
                     }
-                } catch (e) {
+                } catch {
                     resolve(null);
                 }
             } else {

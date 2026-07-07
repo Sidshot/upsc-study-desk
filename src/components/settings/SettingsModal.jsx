@@ -1,13 +1,13 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
-    X, Sun, Moon, Monitor, Palette, Layout, Type, Settings,
-    Play, SkipForward, FastForward, Check, Download, Upload, Database, AlertTriangle, KeyRound, Eye, EyeOff, ExternalLink, Sparkles, Clock, PictureInPicture, MessageSquare, Send, Bug, Lightbulb, MessageCircle
+    X, Sun, Moon, Monitor, Settings,
+    FastForward, Check, Download, Upload, Database, AlertTriangle, KeyRound, Eye, EyeOff, ExternalLink, Sparkles, PictureInPicture, MessageSquare, Send, Bug, Lightbulb, MessageCircle
     , HelpCircle, RefreshCw
 } from 'lucide-react'
 import { useSettings } from '../../contexts/SettingsContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useNotification } from '../../contexts/NotificationContext'
-import { exportAllData, clearAllData, importData, recalculateAllCoursesProgress, detectAllDurations } from '../../utils/db'
+import { exportAllData, clearAllData, importData, recalculateAllCoursesProgress } from '../../utils/db'
 import * as api from '../../utils/api'
 
 const accentColors = [
@@ -34,8 +34,6 @@ function SettingsModal({ isOpen, onClose }) {
     const { theme, setTheme } = useTheme()
     const [activeTab, setActiveTab] = useState('general')
     const [showApiKeys, setShowApiKeys] = useState({ youtube: false, openRouter: false, googleDrive: false, telegramId: false, telegramHash: false })
-    const [detectingDurations, setDetectingDurations] = useState(false)
-    const [durationResult, setDurationResult] = useState(null)
     const [feedbackCategory, setFeedbackCategory] = useState('General')
     const [feedbackMessage, setFeedbackMessage] = useState('')
     const [feedbackEmail, setFeedbackEmail] = useState('')
@@ -883,7 +881,7 @@ function SettingsModal({ isOpen, onClose }) {
                                         {/* Email (optional) */}
                                         <div>
                                             <label className="block text-sm font-medium mb-2">
-                                                Email <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary font-normal">(optional — if you'd like a reply)</span>
+                                                Email <span className="text-xs text-light-text-secondary dark:text-dark-text-secondary font-normal">(optional — if you&apos;d like a reply)</span>
                                             </label>
                                             <input
                                                 type="email"

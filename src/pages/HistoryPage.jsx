@@ -7,7 +7,6 @@ import { formatDuration } from '../utils/db'
 
 function HistoryPage() {
     const [watchedVideos, setWatchedVideos] = useState([])
-    const [courses, setCourses] = useState([])
     const [isLoading, setIsLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
 
@@ -18,12 +17,11 @@ function HistoryPage() {
     async function loadHistory() {
         try {
             setIsLoading(true)
-            const [recent, allCourses] = await Promise.all([
+            const [recent] = await Promise.all([
                 getRecentlyWatchedVideos(100), // Get more for full history
                 getAllCourses()
             ])
             setWatchedVideos(recent)
-            setCourses(allCourses)
         } catch (err) {
             console.error('Failed to load history:', err)
         } finally {

@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
-import { Grid, List, SortAsc, ChevronDown, FolderOpen, Search } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { Grid, List, SortAsc, ChevronDown, FolderOpen, Search, PlayCircle, BookOpen, Trophy } from 'lucide-react'
 import { getAllCourses, addCourse, addModule, addVideo, setInstructorAvatar, recalculateAllCoursesProgress } from '../utils/db'
 import { useSettings } from '../contexts/SettingsContext'
 import { useSearch } from '../contexts/SearchContext'
@@ -293,7 +293,7 @@ function HomePage() {
             if (!confirm(`A course named "${data.title}" already exists. Import anyway?`)) return
         }
         setImportData(data)
-    }, [pendingImport])
+    }, [pendingImport, clearImport, courses])
 
     // Handle YouTube import
     useEffect(() => {
@@ -377,7 +377,7 @@ function HomePage() {
                 showNotification('Failed to save: ' + err.message, 'error')
             }
         })()
-    }, [pendingYouTube])
+    }, [pendingYouTube, clearYouTube, courses, showNotification])
 
     // Handle Google Drive import
     useEffect(() => {
@@ -442,7 +442,7 @@ function HomePage() {
                 showNotification('Failed to save: ' + err.message, 'error')
             }
         })()
-    }, [pendingGoogleDrive])
+    }, [pendingGoogleDrive, clearGoogleDrive, courses, showNotification])
 
     // Handle External Link import
     useEffect(() => {
@@ -463,7 +463,7 @@ function HomePage() {
                 showNotification('Failed to save: ' + err.message, 'error')
             }
         })()
-    }, [pendingExternalLink])
+    }, [pendingExternalLink, clearExternalLink, courses, showNotification])
 
     const sortOptions = [
         { value: 'lastAccessed', label: 'Recently Accessed' },
@@ -471,6 +471,16 @@ function HomePage() {
         { value: 'progress', label: 'Progress' },
         { value: 'dateAdded', label: 'Date Added' }
     ]
+
+    // Quick Stats Calculation
+    const totalCourses = courses.length
+    const completedCourses = courses.filter(c => c.completionPercentage === 100).length
+    const lastAccessedCourse = [...courses].sort((a, b) => new Date(b.lastAccessed || 0) - new Date(a.lastAccessed || 0))[0]
+    
+    const hour = new Date().getHours()
+    let greeting = 'Good evening'
+    if (hour < 12) greeting = 'Good morning'
+    else if (hour < 18) greeting = 'Good afternoon'
 
     if (isLoading) {
         return (
@@ -482,14 +492,55 @@ function HomePage() {
 
     return (
         <div className="container mx-auto px-4 py-8">
-            {/* Premium Welcome Banner */}
-            <div className="mb-10 p-8 sm:p-10 rounded-3xl bg-[#fff4d3] dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-950 border border-amber-200 dark:border-neutral-800 text-stone-950 dark:text-white shadow-xl dark:shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-amber-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 -translate-y-1/2 translate-x-1/2"></div>
-                <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-200 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 translate-y-1/2 -translate-x-1/4"></div>
-                <div className="relative z-10">
-                    <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight text-stone-950 dark:text-white">Welcome to <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-800 to-stone-950 dark:from-blue-400 dark:to-purple-400">Omni</span></h1>
-                    <p className="text-stone-600 dark:text-neutral-400 text-lg max-w-xl font-light">Your academic workspace for courses, notes, lectures, and source-powered updates.</p>
+            {/* Premium Welcome Banner & Dashboard */}
+            <div className="mb-10 flex flex-col gap-6">
+                <div className="p-8 sm:p-10 rounded-3xl bg-white/40 dark:bg-neutral-900/40 backdrop-blur-3xl border border-white/20 dark:border-white/5 text-stone-950 dark:text-white shadow-xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-amber-300 dark:bg-blue-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 -translate-y-1/2 translate-x-1/2 group-hover:scale-110 transition-transform duration-700"></div>
+                    <div className="absolute bottom-0 left-0 w-96 h-96 bg-yellow-200 dark:bg-purple-600 rounded-full mix-blend-multiply dark:mix-blend-screen filter blur-[100px] opacity-20 dark:opacity-10 translate-y-1/2 -translate-x-1/4 group-hover:scale-110 transition-transform duration-700"></div>
+                    <div className="relative z-10">
+                        <h1 className="text-4xl sm:text-5xl font-bold mb-3 tracking-tight text-stone-950 dark:text-white">{greeting}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-stone-900 dark:from-blue-400 dark:to-purple-400">Scholar</span></h1>
+                        <p className="text-stone-600 dark:text-neutral-400 text-lg max-w-xl font-light">Your academic workspace is ready. Pick up right where you left off.</p>
+                    </div>
                 </div>
+
+                {/* Dashboard Widgets */}
+                {courses.length > 0 && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {/* Quick Stats */}
+                        <div className="p-5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300">
+                            <div className="p-3 bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl">
+                                <BookOpen className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Total Courses</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{totalCourses}</p>
+                            </div>
+                        </div>
+                        
+                        <div className="p-5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300">
+                            <div className="p-3 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-xl">
+                                <Trophy className="w-6 h-6" />
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Completed</p>
+                                <p className="text-2xl font-bold text-gray-900 dark:text-white">{completedCourses}</p>
+                            </div>
+                        </div>
+
+                        {/* Continue Learning */}
+                        {lastAccessedCourse && (
+                            <div className="p-5 rounded-2xl bg-white/50 dark:bg-white/5 backdrop-blur-xl border border-white/40 dark:border-white/5 flex items-center gap-4 hover:-translate-y-1 transition-transform duration-300 cursor-pointer" onClick={() => window.location.href = `/course/${lastAccessedCourse.id}`}>
+                                <div className="p-3 bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl">
+                                    <PlayCircle className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Continue Learning</p>
+                                    <p className="text-lg font-bold text-gray-900 dark:text-white truncate">{lastAccessedCourse.title}</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Filter Tabs + Sort/View Controls */}
@@ -597,7 +648,7 @@ function HomePage() {
                     <FolderOpen className="w-16 h-16 mx-auto mb-4 text-neutral-500 opacity-50" />
                     <h2 className="text-xl font-semibold mb-2 text-stone-900 dark:text-white">No courses yet</h2>
                     <p className="text-stone-600 dark:text-neutral-400 mb-6">
-                        Click "Add Paper" in the header to get started
+                        Click &quot;Add Paper&quot; in the header to get started
                     </p>
                 </div>
             ) : (

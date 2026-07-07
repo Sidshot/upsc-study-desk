@@ -1,9 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import {
-    Map, Plus, Trash2, ZoomIn, ZoomOut,
-    Maximize2, BookOpen, Play, CheckCircle,
-    ArrowRight, X, Grid3X3
+    Map,
+    Plus,
+    Trash2,
+    ZoomIn,
+    ZoomOut,
+    Maximize2,
+    BookOpen,
+    Play,
+    CheckCircle,
+    ArrowRight,
+    X,
+    Grid3X3
 } from 'lucide-react'
 import { getAllCourses } from '../utils/db'
 import { getRoadmaps, addRoadmap, updateRoadmap, deleteRoadmap as deleteRoadmapDb } from '../utils/roadmapDb'
@@ -37,9 +46,9 @@ function RoadmapPage() {
     // Guard to prevent auto-save from firing before a new roadmap is committed to DB
     const skipNextAutoSave = useRef(false)
 
-    // Load courses and roadmaps
     useEffect(() => {
         loadData()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     async function loadData() {
@@ -347,6 +356,7 @@ function RoadmapPage() {
             const timeout = setTimeout(saveRoadmap, 1000)
             return () => clearTimeout(timeout)
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [nodes, connections, pan, zoom])
 
     if (isLoading) {

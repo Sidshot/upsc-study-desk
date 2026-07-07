@@ -73,3 +73,6 @@ fixOrder.mjs
 docs/*.resolved
 docs/PRD.md
 docs/notes.md
+
+# Large backup files
+upsc_project_full_backup.zip

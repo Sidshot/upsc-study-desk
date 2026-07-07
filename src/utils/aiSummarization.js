@@ -5,7 +5,7 @@
  * All processing happens in-browser, offline after initial model download.
  */
 
-import { updateVideo, getVideo } from './db'
+import { updateVideo } from './db'
 
 // Transformers.js pipeline (loaded on demand)
 let transcriptionPipeline = null

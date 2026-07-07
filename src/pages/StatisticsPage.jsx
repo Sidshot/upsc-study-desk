@@ -191,7 +191,7 @@ function StatisticsPage() {
                 <div className="bg-white dark:bg-dark-surface rounded-xl border border-light-border dark:border-dark-border p-6">
                     <h3 className="font-semibold text-light-text-primary dark:text-dark-text-primary mb-4 flex items-center gap-2">
                         <Calendar className="w-5 h-5 text-primary-fg" />
-                        This Week's Activity
+                        This Week&apos;s Activity
                     </h3>
                     <div className="flex items-end justify-between gap-2 h-40">
                         {stats.weekActivity.map((day, index) => {
