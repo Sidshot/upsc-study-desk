@@ -47,6 +47,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
     const [smartScanLimit, setSmartScanLimit] = useState(500)
     const [onlyNewScan, setOnlyNewScan] = useState(false)
     const [cacheStatus, setCacheStatus] = useState(null)
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const [parseRules, setParseRules] = useState({
         groupBy: 'auto',
         defaultScanLimit: 500,
@@ -105,6 +106,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
             courseTitleOverride: '',
         })
         setIgnoredWordsText('')
+        setIsSubmitting(false)
 
         if (!apiId || !apiHash) return
 
@@ -341,6 +343,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                 maxMessages: smartScanLimit
             })
             setCacheStatus(prev => ({ ...(prev || {}), mediaCount: job.cached || preview.cached || 0 }))
+            setIsSubmitting(true)
             onImport(withServerUrls(preview.course))
             setIsSmartScanning(false)
             return
@@ -388,6 +391,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                 setError('No cached Telegram media yet. Run Smart Scan once first.')
                 return
             }
+            setIsSubmitting(true)
             onImport(withServerUrls(data.course))
         } catch (err) {
             setError('Cached preview failed: ' + err.message)
@@ -533,6 +537,7 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                 topicTitle: selectedTopic?.title,
                 messages: selected
             })
+            setIsSubmitting(true)
             onImport(withServerUrls(data.course))
         } catch (err) {
             setError('Smart arrange failed: ' + err.message)
@@ -947,11 +952,11 @@ function TelegramImportModal({ isOpen, onClose, onImport, settings }) {
                                     {/* Import Button */}
                                     <button
                                         onClick={handleImportSelected}
-                                        disabled={selectedVideos.size === 0 || isSmartScanning}
-                                        className="omni-action-primary w-full mt-2"
+                                        disabled={selectedVideos.size === 0 || isSmartScanning || isSubmitting}
+                                        className="px-6 py-2 bg-[#6b8cff] hover:bg-[#5a7bed] text-white rounded-xl font-medium transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
                                     >
-                                        {isSmartScanning ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                                        Arrange & Import {selectedVideos.size > 0 ? `${selectedVideos.size} File${selectedVideos.size > 1 ? 's' : ''}` : 'Selected'}
+                                        {isSmartScanning || isSubmitting ? <Loader className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                                        {isSmartScanning || isSubmitting ? 'Processing...' : `Arrange & Import ${selectedVideos.size > 0 ? `${selectedVideos.size} File${selectedVideos.size > 1 ? 's' : ''}` : 'Selected'}`}
                                     </button>
                                 </>
                             )}

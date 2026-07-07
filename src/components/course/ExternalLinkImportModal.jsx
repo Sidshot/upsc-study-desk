@@ -23,6 +23,7 @@ function ExternalLinkImportModal({ isOpen, onClose, onImport }) {
     const [isDragging, setIsDragging] = useState(false)
     const [isFetching, setIsFetching] = useState(false)
     const [fetchStatus, setFetchStatus] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const fileInputRef = useRef(null)
 
     useEffect(() => {
@@ -30,6 +31,7 @@ function ExternalLinkImportModal({ isOpen, onClose, onImport }) {
             setFormData(defaultData)
             setErrors({})
             setFetchStatus('')
+            setIsSubmitting(false)
         }
     }, [isOpen])
 
@@ -212,7 +214,8 @@ function ExternalLinkImportModal({ isOpen, onClose, onImport }) {
     }
 
     function handleImport() {
-        if (!validate()) return
+        if (!validate() || isSubmitting) return
+        setIsSubmitting(true)
 
         const hours = parseInt(formData.hours) || 0
         const minutes = parseInt(formData.minutes) || 0
@@ -413,11 +416,11 @@ function ExternalLinkImportModal({ isOpen, onClose, onImport }) {
                     </button>
                     <button
                         onClick={handleImport}
-                        disabled={!formData.title.trim() || !formData.courseUrl.trim()}
+                        disabled={!formData.title.trim() || !formData.courseUrl.trim() || isSubmitting}
                         className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                        <Upload className="w-4 h-4" />
-                        Import Course
+                        {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                        {isSubmitting ? 'Importing...' : 'Import Course'}
                     </button>
                 </div>
             </div>

@@ -61,6 +61,7 @@ function ImportPreviewModal({
     const [thumbnail, setThumbnail] = useState(null)
     const [thumbnailPreview, setThumbnailPreview] = useState(null)
     const [expandedModules, setExpandedModules] = useState({})
+    const [isSubmitting, setIsSubmitting] = useState(false)
     const fileInputRef = useRef(null)
     const { showNotification } = useNotification()
 
@@ -124,6 +125,8 @@ function ImportPreviewModal({
     }
 
     function handleConfirm() {
+        if (isSubmitting || isImporting) return
+        setIsSubmitting(true)
         onConfirm({
             title: courseName,
             instructor: instructor,
@@ -400,16 +403,16 @@ function ImportPreviewModal({
                     <button
                         onClick={onCancel}
                         className="px-4 py-2 text-sm font-medium border border-light-border dark:border-dark-border rounded-lg hover:bg-light-surface dark:hover:bg-dark-bg transition-colors"
-                        disabled={isImporting}
+                        disabled={isImporting || isSubmitting}
                     >
                         Cancel
                     </button>
                     <button
                         onClick={handleConfirm}
-                        disabled={!courseName.trim() || isImporting}
+                        disabled={!courseName.trim() || isImporting || isSubmitting}
                         className="px-4 py-2 text-sm font-medium bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
-                        {isImporting ? (
+                        {(isImporting || isSubmitting) ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                                 Importing...

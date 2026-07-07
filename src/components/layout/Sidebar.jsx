@@ -38,6 +38,7 @@ function Sidebar() {
     const [showGoogleDriveModal, setShowGoogleDriveModal] = useState(false)
     const [showExternalLinkModal, setShowExternalLinkModal] = useState(false)
     const [showTelegramModal, setShowTelegramModal] = useState(false)
+    const [isTransitioning, setIsTransitioning] = useState(false)
 
     const { settings } = useSettings()
     const { dispatchImport, dispatchYouTube, dispatchGoogleDrive, dispatchExternalLink } = useImport()
@@ -97,6 +98,14 @@ function Sidebar() {
         if (isMobileOpen) {
             closeMobileSidebar()
         }
+    }
+
+    const handleMenuClick = (action) => {
+        if (isTransitioning) return
+        setIsTransitioning(true)
+        action()
+        setShowAddMenu(false)
+        setTimeout(() => setIsTransitioning(false), 300)
     }
 
     async function handleLocalImportClick() {
@@ -159,36 +168,41 @@ function Sidebar() {
                     {showAddMenu && (
                         <div className={`absolute top-full mt-2 w-56 py-2 bg-white dark:bg-neutral-900 rounded-xl shadow-2xl border border-gray-100 dark:border-white/10 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 ${isExpanded ? 'left-3' : 'left-3'}`}>
                             <button
-                                onClick={handleLocalImportClick}
-                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                                onClick={() => handleMenuClick(handleLocalImportClick)}
+                                disabled={isTransitioning}
+                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors disabled:opacity-50"
                             >
                                 <FolderOpen className="w-4 h-4 text-gray-400" />
                                 Local Folder
                             </button>
                             <button
-                                onClick={() => { setShowYouTubeModal(true); setShowAddMenu(false); }}
-                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                                onClick={() => handleMenuClick(() => setShowYouTubeModal(true))}
+                                disabled={isTransitioning}
+                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors disabled:opacity-50"
                             >
                                 <Youtube className="w-4 h-4 text-red-500" />
                                 From YouTube
                             </button>
                             <button
-                                onClick={() => { setShowGoogleDriveModal(true); setShowAddMenu(false); }}
-                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                                onClick={() => handleMenuClick(() => setShowGoogleDriveModal(true))}
+                                disabled={isTransitioning}
+                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors disabled:opacity-50"
                             >
                                 <HardDrive className="w-4 h-4 text-primary" />
                                 From Google Drive
                             </button>
                             <button
-                                onClick={() => { setShowExternalLinkModal(true); setShowAddMenu(false); }}
-                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                                onClick={() => handleMenuClick(() => setShowExternalLinkModal(true))}
+                                disabled={isTransitioning}
+                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors disabled:opacity-50"
                             >
                                 <Link2 className="w-4 h-4 text-blue-500" />
                                 From External Link
                             </button>
                             <button
-                                onClick={() => { setShowTelegramModal(true); setShowAddMenu(false); }}
-                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors"
+                                onClick={() => handleMenuClick(() => setShowTelegramModal(true))}
+                                disabled={isTransitioning}
+                                className="w-full px-4 py-3 text-left text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 flex items-center gap-3 transition-colors disabled:opacity-50"
                             >
                                 <Send className="w-4 h-4 text-blue-500" />
                                 From Telegram

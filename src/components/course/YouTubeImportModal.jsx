@@ -11,6 +11,7 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
     const [error, setError] = useState(null)
     const [previewData, setPreviewData] = useState(null)
     const [importType, setImportType] = useState(null) // 'video' or 'playlist'
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     // Reset when opened
     useEffect(() => {
@@ -19,6 +20,7 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
             setError(null)
             setPreviewData(null)
             setImportType(null)
+            setIsSubmitting(false)
         }
     }, [isOpen])
 
@@ -199,7 +201,8 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
     }
 
     function handleConfirm() {
-        if (!previewData) return
+        if (!previewData || isSubmitting) return
+        setIsSubmitting(true)
         onImport({
             title: previewData.title,
             instructor: previewData.author,
@@ -312,11 +315,11 @@ function YouTubeImportModal({ isOpen, onClose, onImport }) {
                     </button>
                     <button
                         onClick={handleConfirm}
-                        disabled={!previewData}
+                        disabled={!previewData || isSubmitting}
                         className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 flex items-center gap-2"
                     >
-                        <Save className="w-4 h-4" />
-                        Import Course
+                        {isSubmitting ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isSubmitting ? 'Importing...' : 'Import Course'}
                     </button>
                 </div>
             </div>

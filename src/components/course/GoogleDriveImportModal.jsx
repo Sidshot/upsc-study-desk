@@ -11,6 +11,7 @@ function GoogleDriveImportModal({ isOpen, onClose, onImport }) {
     const [error, setError] = useState(null)
     const [previewData, setPreviewData] = useState(null)
     const [folderName, setFolderName] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const apiKey = settings.googleApiKey
 
@@ -21,6 +22,7 @@ function GoogleDriveImportModal({ isOpen, onClose, onImport }) {
             setError(null)
             setPreviewData(null)
             setFolderName('')
+            setIsSubmitting(false)
         }
     }, [isOpen])
 
@@ -77,7 +79,8 @@ function GoogleDriveImportModal({ isOpen, onClose, onImport }) {
     }
 
     function handleConfirm() {
-        if (!previewData) return
+        if (!previewData || isSubmitting) return
+        setIsSubmitting(true)
 
         // Get thumbnail from first video if available
         let thumbnail = null
@@ -238,11 +241,11 @@ function GoogleDriveImportModal({ isOpen, onClose, onImport }) {
                     </button>
                     <button
                         onClick={handleConfirm}
-                        disabled={!previewData}
+                        disabled={!previewData || isSubmitting}
                         className="px-4 py-2 text-sm bg-primary text-primary-content text-white rounded-lg hover:bg-primary-hover disabled:opacity-50 flex items-center gap-2"
                     >
-                        <Save className="w-4 h-4" />
-                        Import Course
+                        {isSubmitting ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        {isSubmitting ? 'Importing...' : 'Import Course'}
                     </button>
                 </div>
             </div>
