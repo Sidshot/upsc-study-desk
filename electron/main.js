@@ -316,7 +316,7 @@ function prepareServerEnvironment() {
     process.env.OMNI_RESOURCES_PATH = process.resourcesPath
     process.env.OMNI_APP_PATH = app.getAppPath()
     process.env.OMNI_APP_VERSION = app.getVersion()
-    process.env.OMNI_LOCAL_API_TOKEN = randomBytes(32).toString('hex')
+    process.env.OMNI_LOCAL_API_TOKEN ||= randomBytes(32).toString('hex')
 }
 
 const startServer = async () => {
@@ -411,6 +411,7 @@ if (!gotSingleInstanceLock) {
 app.whenReady().then(async () => {
     logStartup(`App ready for Omni ${app.getVersion()}`)
     configureUpdater()
+    prepareServerEnvironment()
     createWindow()
     startServerAndLoadUi()
 
