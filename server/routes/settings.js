@@ -6,8 +6,6 @@ import { requireTrustedDesktopSession } from '../utils/localApiAuth.js'
 
 const router = express.Router()
 
-router.use(requireTrustedDesktopSession)
-
 // GET /api/settings
 router.get('/', (req, res) => {
     try {

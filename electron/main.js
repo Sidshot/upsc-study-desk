@@ -8,6 +8,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const require = createRequire(import.meta.url)
 const { autoUpdater } = require('electron-updater')
+let mainWindow = null
 
 const updateState = {
     configured: false,
@@ -173,6 +174,54 @@ function attachDesktopSessionHeaders(session) {
     )
 }
 
+function focusMainWindow() {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (mainWindow.isMinimized()) {
+        mainWindow.restore()
+    }
+    if (!mainWindow.isVisible()) {
+        mainWindow.show()
+    }
+    mainWindow.focus()
+}
+
+function renderStartupError(message) {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+
+    const safeMessage = String(message || 'Omni could not finish starting.').replace(/[&<>"]/g, (char) => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+    }[char]))
+
+    const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Omni Startup Error</title>
+    <style>
+      body { font-family: Segoe UI, Arial, sans-serif; background: #111827; color: #f9fafb; margin: 0; padding: 32px; }
+      .wrap { max-width: 720px; margin: 0 auto; padding: 24px; border-radius: 16px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.08); }
+      h1 { margin-top: 0; font-size: 24px; }
+      p { line-height: 1.5; color: #d1d5db; }
+      code { display: block; margin-top: 16px; padding: 12px; border-radius: 10px; background: rgba(0,0,0,0.25); color: #f3f4f6; white-space: pre-wrap; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <h1>Omni could not finish starting</h1>
+      <p>The local app server did not become ready in time. Your data is still on disk. Please try reopening Omni once.</p>
+      <code>${safeMessage}</code>
+    </div>
+  </body>
+</html>`
+
+    mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`)
+    mainWindow.show()
+    mainWindow.focus()
+}
+
 const startServer = async () => {
     // Static ES imports run before this file's body, so the server must be
     // imported dynamically after these production paths are available.
@@ -186,12 +235,13 @@ const startServer = async () => {
 }
 
 const createWindow = () => {
-    const mainWindow = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         width: 1280,
         height: 800,
         minWidth: 800,
         minHeight: 600,
         icon: path.join(__dirname, '../public/omni.ico'),
+        show: false,
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -203,6 +253,11 @@ const createWindow = () => {
     // Remove the default Electron menu bar for a cleaner app look
     Menu.setApplicationMenu(null)
 
+    mainWindow.once('ready-to-show', () => {
+        mainWindow.show()
+        mainWindow.focus()
+    })
+
     // Wait for the local Express server to start responding, then load the UI
     const pollServer = async (retries = 30) => {
         try {
@@ -213,11 +268,22 @@ const createWindow = () => {
                 setTimeout(() => pollServer(retries - 1), 500)
             } else {
                 console.error('Server did not start in time:', err)
+                renderStartupError(err?.message || err)
             }
         }
     }
 
     pollServer()
+}
+
+const gotSingleInstanceLock = app.requestSingleInstanceLock()
+
+if (!gotSingleInstanceLock) {
+    app.quit()
+} else {
+    app.on('second-instance', () => {
+        focusMainWindow()
+    })
 }
 
 app.whenReady().then(async () => {
@@ -227,6 +293,7 @@ app.whenReady().then(async () => {
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) createWindow()
+        else focusMainWindow()
     })
 })
 

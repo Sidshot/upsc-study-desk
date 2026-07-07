@@ -15,6 +15,7 @@ export default [
             'audit_runs/**',
             'tools/**',
             'audit.cjs',
+            '_install_test_*/**',
         ],
     },
     js.configs.recommended,
