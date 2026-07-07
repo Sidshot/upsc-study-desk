@@ -241,7 +241,8 @@ const createWindow = () => {
         minWidth: 800,
         minHeight: 600,
         icon: path.join(__dirname, '../public/omni.ico'),
-        show: false,
+        show: true,
+        backgroundColor: '#111827',
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
@@ -253,10 +254,8 @@ const createWindow = () => {
     // Remove the default Electron menu bar for a cleaner app look
     Menu.setApplicationMenu(null)
 
-    mainWindow.once('ready-to-show', () => {
-        mainWindow.show()
-        mainWindow.focus()
-    })
+    mainWindow.show()
+    mainWindow.focus()
 
     // Wait for the local Express server to start responding, then load the UI
     const pollServer = async (retries = 30) => {
