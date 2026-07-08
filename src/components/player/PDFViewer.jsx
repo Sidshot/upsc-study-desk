@@ -9,7 +9,14 @@ import 'react-pdf/dist/Page/TextLayer.css'
 
 pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker
 
-export default function PDFViewer({ fileUrl, title, onLoad }) {
+const CHECKPOINT_STYLES = {
+    important: 'bg-amber-500 text-white',
+    confusing: 'bg-rose-500 text-white',
+    exam_worthy: 'bg-sky-500 text-white',
+    revise: 'bg-emerald-500 text-white',
+}
+
+export default function PDFViewer({ fileUrl, title, onLoad, initialPage = 1, onPageChange, checkpoints = [] }) {
     const [numPages, setNumPages] = useState(null)
     const [pageNumber, setPageNumber] = useState(1)
     const [scale, setScale] = useState(1.0)
@@ -17,8 +24,10 @@ export default function PDFViewer({ fileUrl, title, onLoad }) {
 
     function onDocumentLoadSuccess({ numPages }) {
         setNumPages(numPages)
-        setPageNumber(1)
+        const nextPage = Math.min(Math.max(initialPage || 1, 1), numPages)
+        setPageNumber(nextPage)
         setLoading(false)
+        onPageChange?.(nextPage)
         if (onLoad) onLoad()
     }
 
@@ -38,10 +47,39 @@ export default function PDFViewer({ fileUrl, title, onLoad }) {
         return () => window.removeEventListener('keydown', handleKeyDown)
     }, [numPages])
 
+    useEffect(() => {
+        if (!numPages) return
+        const nextPage = Math.min(Math.max(initialPage || 1, 1), numPages)
+        setPageNumber(prev => (prev === nextPage ? prev : nextPage))
+    }, [initialPage, numPages])
+
+    useEffect(() => {
+        onPageChange?.(pageNumber)
+    }, [pageNumber, onPageChange])
+
+    const pageCheckpoints = checkpoints
+        .filter(checkpoint => checkpoint.anchorKind === 'page' && Number(checkpoint.anchorValue) >= 1)
+        .sort((a, b) => Number(a.anchorValue) - Number(b.anchorValue))
+
     return (
         <div className="flex flex-col w-full h-full bg-light-surface dark:bg-dark-surface overflow-hidden relative">
             {/* Toolbar */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4 px-4 py-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-full shadow-xl text-white z-10 transition-opacity">
+            <div className="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-3">
+                {pageCheckpoints.length > 0 && (
+                    <div className="flex max-w-[min(92vw,760px)] flex-wrap justify-center gap-2 px-3">
+                        {pageCheckpoints.map(checkpoint => (
+                            <button
+                                key={checkpoint.id}
+                                onClick={() => setPageNumber(Number(checkpoint.anchorValue))}
+                                className={`rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-lg transition-colors ${CHECKPOINT_STYLES[checkpoint.checkpointType] || 'bg-white/20 text-white'} ${Number(checkpoint.anchorValue) === pageNumber ? 'ring-2 ring-white/80' : ''}`}
+                                title={`${checkpoint.checkpointType.replace('_', ' ')} on page ${checkpoint.anchorValue}`}
+                            >
+                                p{checkpoint.anchorValue}
+                            </button>
+                        ))}
+                    </div>
+                )}
+                <div className="flex items-center gap-4 px-4 py-2 bg-black/70 backdrop-blur-md border border-white/10 rounded-full shadow-xl text-white transition-opacity">
                 <div className="flex items-center gap-1">
                     <button onClick={zoomOut} className="p-1.5 hover:bg-white/20 rounded-full transition-colors" title="Zoom Out">
                         <ZoomOut className="w-4 h-4" />
@@ -71,6 +109,7 @@ export default function PDFViewer({ fileUrl, title, onLoad }) {
                 <a href={fileUrl} download={title || "document.pdf"} target="_blank" rel="noreferrer" className="p-1.5 hover:bg-white/20 rounded-full transition-colors" title="Download Original PDF">
                     <Download className="w-4 h-4" />
                 </a>
+                </div>
             </div>
 
             {/* Document Container */}

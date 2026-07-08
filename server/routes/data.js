@@ -26,6 +26,8 @@ router.delete('/reset', (req, res) => {
     try {
         const db = getDb()
         const tables = [
+            'revision_queue',
+            'checkpoints',
             'dub_jobs',
             'watch_sessions',
             'analytics',
@@ -95,9 +97,11 @@ router.get('/export', requireTrustedDesktopSession, (req, res) => {
         const roadmaps    = getAll('SELECT * FROM roadmaps')
         const settings    = getAll('SELECT * FROM settings')
         const dub_jobs    = getAll('SELECT * FROM dub_jobs')
+        const checkpoints = getAll('SELECT * FROM checkpoints')
+        const revisionQueue = getAll('SELECT * FROM revision_queue')
 
         res.json({
-            version: 4,
+            version: 5,
             exportedAt: new Date().toISOString(),
             courses,
             modules,
@@ -109,6 +113,8 @@ router.get('/export', requireTrustedDesktopSession, (req, res) => {
             roadmaps,
             settings,
             dub_jobs,
+            checkpoints,
+            revision_queue: revisionQueue,
         })
     } catch (err) {
         res.status(500).json({ error: err.message })
@@ -216,6 +222,19 @@ router.post('/import', requireTrustedDesktopSession, (req, res) => {
                 upsert('dub_jobs', data.dub_jobs, [
                     'id','video_id','language','status','step','progress',
                     'audio_path','file_size','error_message','created_at','completed_at'
+                ])
+            }
+            if (data.checkpoints) {
+                upsert('checkpoints', data.checkpoints, [
+                    'id','course_id','video_id','note_id','anchor_kind','anchor_value',
+                    'checkpoint_type','text','created_at'
+                ])
+            }
+            if (data.revision_queue) {
+                upsert('revision_queue', data.revision_queue, [
+                    'id','checkpoint_id','course_id','video_id','note_id','display_title',
+                    'status','due_at','urgency','origin','anchor_kind','anchor_value',
+                    'checkpoint_type','completed_at','updated_at'
                 ])
             }
             if (data.settings) {

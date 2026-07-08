@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Grid, List, SortAsc, ChevronDown, FolderOpen, Search, PlayCircle, BookOpen, Trophy } from 'lucide-react'
-import { getAllCourses, addCourse, addModule, addVideo, setInstructorAvatar, recalculateAllCoursesProgress } from '../utils/db'
+import { Grid, List, SortAsc, ChevronDown, FolderOpen, Search, PlayCircle, BookOpen, Trophy, CircleCheck, Clock3, ListTodo, XCircle } from 'lucide-react'
+import { getAllCourses, addCourse, addModule, addVideo, setInstructorAvatar, recalculateAllCoursesProgress, getTodaysRevisionQueue, getRevisionSummary, updateRevisionQueueItem } from '../utils/db'
 import { useSettings } from '../contexts/SettingsContext'
 import { useSearch } from '../contexts/SearchContext'
 import { useNotification } from '../contexts/NotificationContext'
@@ -29,6 +29,8 @@ function HomePage() {
     const [isApplyingSync, setIsApplyingSync] = useState(false)
     const [sourceMap, setSourceMap] = useState({})
     const [sourceUpdateTarget, setSourceUpdateTarget] = useState(null)
+    const [revisionItems, setRevisionItems] = useState([])
+    const [revisionSummary, setRevisionSummary] = useState({ pendingTotal: 0, dueToday: 0, overdue: 0, completedToday: 0 })
     const { settings, updateSettings } = useSettings()
     const { searchQuery, setSearchQuery } = useSearch()
     const { showNotification } = useNotification()
@@ -47,6 +49,10 @@ function HomePage() {
     // Load courses on mount
     useEffect(() => {
         loadCourses()
+    }, [])
+
+    useEffect(() => {
+        loadRevisionData()
     }, [])
 
     // Debounce search
@@ -75,6 +81,19 @@ function HomePage() {
             console.error('Failed to load courses:', err)
         } finally {
             setIsLoading(false)
+        }
+    }
+
+    async function loadRevisionData() {
+        try {
+            const [items, summary] = await Promise.all([
+                getTodaysRevisionQueue(),
+                getRevisionSummary(),
+            ])
+            setRevisionItems(items || [])
+            setRevisionSummary(summary || { pendingTotal: 0, dueToday: 0, overdue: 0, completedToday: 0 })
+        } catch (err) {
+            console.error('Failed to load revision queue:', err)
         }
     }
 
@@ -138,6 +157,27 @@ function HomePage() {
 
     function toggleViewMode() {
         updateSettings({ viewMode: viewMode === 'grid' ? 'list' : 'grid' })
+    }
+
+    function openRevisionItem(item) {
+        const params = new URLSearchParams({
+            videoId: item.videoId,
+            anchorKind: item.anchorKind,
+        })
+        if (item.anchorValue !== undefined && item.anchorValue !== null) {
+            params.set('anchorValue', item.anchorValue)
+        }
+        navigate(`/course/${item.courseId}?${params.toString()}`)
+    }
+
+    async function handleRevisionStatus(itemId, status) {
+        try {
+            await updateRevisionQueueItem(itemId, { status })
+            await loadRevisionData()
+        } catch (err) {
+            console.error('Failed to update revision item:', err)
+            showNotification('Failed to update revision item: ' + err.message, 'error')
+        }
     }
 
     // Handle import confirmation - save course to database
@@ -541,6 +581,78 @@ function HomePage() {
                                 </div>
                             </div>
                         )}
+                    </div>
+                )}
+
+                {(revisionSummary.pendingTotal > 0 || revisionItems.length > 0) && (
+                    <div className="mt-5 rounded-3xl border border-white/40 bg-white/55 p-5 backdrop-blur-xl dark:border-white/10 dark:bg-white/5">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-xl font-bold text-stone-950 dark:text-white">Today&apos;s Revision</h2>
+                                <p className="text-sm text-stone-600 dark:text-neutral-400">Due items across all courses, ready to reopen at the exact anchor.</p>
+                            </div>
+                            <div className="inline-flex items-center gap-2 rounded-full bg-stone-900 px-3 py-1.5 text-xs font-semibold text-white dark:bg-white dark:text-neutral-900">
+                                <ListTodo className="h-3.5 w-3.5" />
+                                {revisionSummary.pendingTotal} pending
+                            </div>
+                        </div>
+
+                        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+                            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-300/15 dark:bg-amber-400/10">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-200">Due today</div>
+                                <div className="mt-1 text-2xl font-bold text-amber-900 dark:text-white">{revisionSummary.dueToday}</div>
+                            </div>
+                            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-300/15 dark:bg-rose-400/10">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-rose-700 dark:text-rose-200">Overdue</div>
+                                <div className="mt-1 text-2xl font-bold text-rose-900 dark:text-white">{revisionSummary.overdue}</div>
+                            </div>
+                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-300/15 dark:bg-emerald-400/10">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-200">Done today</div>
+                                <div className="mt-1 text-2xl font-bold text-emerald-900 dark:text-white">{revisionSummary.completedToday}</div>
+                            </div>
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 dark:border-white/10 dark:bg-white/5">
+                                <div className="text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-neutral-400">Visible now</div>
+                                <div className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{revisionItems.length}</div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3">
+                            {revisionItems.slice(0, 6).map(item => (
+                                <div key={item.id} className="flex flex-col gap-3 rounded-2xl border border-white/40 bg-white/70 p-4 dark:border-white/10 dark:bg-black/10 md:flex-row md:items-center md:justify-between">
+                                    <button className="min-w-0 text-left" onClick={() => openRevisionItem(item)}>
+                                        <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-stone-500 dark:text-neutral-500">
+                                            <Clock3 className="h-3.5 w-3.5" />
+                                            {item.checkpointType?.replace('_', ' ') || 'Revision'}
+                                        </div>
+                                        <div className="truncate text-sm font-semibold text-stone-950 dark:text-white">{item.displayTitle}</div>
+                                        <div className="mt-1 text-xs text-stone-500 dark:text-neutral-400">
+                                            Due {new Date(item.dueAt).toLocaleString()}
+                                        </div>
+                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handleRevisionStatus(item.id, 'completed')}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200"
+                                        >
+                                            <CircleCheck className="h-3.5 w-3.5" />
+                                            Done
+                                        </button>
+                                        <button
+                                            onClick={() => handleRevisionStatus(item.id, 'dismissed')}
+                                            className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-100 px-3 py-1.5 text-xs font-semibold text-stone-700 dark:border-white/10 dark:bg-white/5 dark:text-neutral-300"
+                                        >
+                                            <XCircle className="h-3.5 w-3.5" />
+                                            Dismiss
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                            {revisionItems.length === 0 && (
+                                <div className="rounded-2xl border border-dashed border-white/20 bg-white/40 p-4 text-sm text-stone-600 dark:border-white/10 dark:bg-black/10 dark:text-neutral-400">
+                                    Nothing is due right now. Upcoming revision items will appear here as their due time arrives.
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>

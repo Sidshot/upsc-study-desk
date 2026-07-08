@@ -273,6 +273,53 @@ export async function getRecentlyWatchedVideos(limit = 10) {
     return api.get(`/api/analytics/history?limit=${limit}`)
 }
 
+// ============= CHECKPOINT OPERATIONS =============
+
+export async function addCheckpoint(checkpointData) {
+    return api.post('/api/checkpoints', {
+        id: generateId('checkpoint_'),
+        revisionId: generateId('revision_'),
+        ...checkpointData,
+    })
+}
+
+export async function getCheckpointsByVideo(videoId) {
+    return api.get(`/api/checkpoints/by-video/${videoId}`)
+}
+
+export async function getCheckpointsByCourse(courseId) {
+    return api.get(`/api/checkpoints/by-course/${courseId}`)
+}
+
+export async function deleteCheckpoint(checkpointId) {
+    return api.del(`/api/checkpoints/${checkpointId}`)
+}
+
+// ============= REVISION QUEUE OPERATIONS =============
+
+export async function getRevisionQueue(filters = {}) {
+    const search = new URLSearchParams()
+    for (const [key, value] of Object.entries(filters)) {
+        if (value !== undefined && value !== null && value !== '') {
+            search.set(key, value)
+        }
+    }
+    const suffix = search.toString() ? `?${search.toString()}` : ''
+    return api.get(`/api/revision-queue${suffix}`)
+}
+
+export async function getTodaysRevisionQueue() {
+    return api.get('/api/revision-queue/today')
+}
+
+export async function getRevisionSummary() {
+    return api.get('/api/revision-queue/summary')
+}
+
+export async function updateRevisionQueueItem(itemId, updates) {
+    return api.put(`/api/revision-queue/${itemId}`, updates)
+}
+
 // ============= UTILITIES =============
 
 export function formatDuration(seconds) {

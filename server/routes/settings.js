@@ -66,6 +66,8 @@ router.delete('/reset', requireTrustedDesktopSession, (req, res) => {
         db.run('PRAGMA foreign_keys = OFF')
         try {
             transaction(() => {
+                db.run('DELETE FROM revision_queue')
+                db.run('DELETE FROM checkpoints')
                 db.run('DELETE FROM watch_sessions')
                 db.run('DELETE FROM notes')
                 db.run('DELETE FROM videos')

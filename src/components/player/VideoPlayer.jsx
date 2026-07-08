@@ -88,6 +88,13 @@ function telegramStreamErrorMessage(message = '') {
     return message || 'Telegram stream could not be opened. Check Telegram connection and try Update Telegram.'
 }
 
+const CHECKPOINT_ACCENT = {
+    important: '#f59e0b',
+    confusing: '#ef4444',
+    exam_worthy: '#0ea5e9',
+    revise: '#10b981',
+}
+
 function NonVideoResourceViewer({ video, fileUrl, onReady }) {
     useEffect(() => {
         onReady?.()
@@ -146,7 +153,7 @@ function NonVideoResourceViewer({ video, fileUrl, onReady }) {
 }
 
 
-const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext, onPrevious, courseId, onTimeUpdate, autoPlay, onAspectRatioChange }, ref) {
+const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext, onPrevious, courseId, onTimeUpdate, onAnchorChange, autoPlay, onAspectRatioChange, initialAnchor, checkpoints = [] }, ref) {
     const { settings, updateSettings } = useSettings()
     const videoRef = useRef(null)
     const containerRef = useRef(null)
@@ -200,6 +207,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     const setShowDubModal = () => {} // no-op
     const [showSettingsMenu, setShowSettingsMenu] = useState(false)
     const [settingsSubMenu, setSettingsSubMenu] = useState('main')
+    const [currentPdfPage, setCurrentPdfPage] = useState(1)
 
     const progressIntervalRef = useRef(null)
     const controlsTimeoutRef = useRef(null)
@@ -362,6 +370,11 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             setIsLoading(video.type === 'pdf')
             setDuration(video.duration || 0)
             setResumePosition(0)
+            const nextPage = initialAnchor?.kind === 'page' ? Math.max(1, Number(initialAnchor.value) || 1) : 1
+            setCurrentPdfPage(nextPage)
+            if (video.type === 'pdf') {
+                onAnchorChange?.({ kind: 'page', value: nextPage })
+            }
             return
         }
 
@@ -382,6 +395,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             } else {
                 setResumePosition(0)
             }
+            if (initialAnchor?.kind === 'timestamp') {
+                setResumePosition(Number(initialAnchor.value) || 0)
+            }
             return
         }
 
@@ -397,6 +413,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                 setResumePosition(video.lastWatchedPosition)
             } else {
                 setResumePosition(0)
+            }
+            if (initialAnchor?.kind === 'timestamp') {
+                setResumePosition(Number(initialAnchor.value) || 0)
             }
             return
         }
@@ -440,6 +459,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
             } else {
                 setResumePosition(0)
             }
+            if (initialAnchor?.kind === 'timestamp') {
+                setResumePosition(Number(initialAnchor.value) || 0)
+            }
             return
         }
 
@@ -472,6 +494,9 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                 setResumePosition(video.lastWatchedPosition)
             } else {
                 setResumePosition(0)
+            }
+            if (initialAnchor?.kind === 'timestamp') {
+                setResumePosition(Number(initialAnchor.value) || 0)
             }
         } catch (err) {
             console.error('Failed to load video:', err)
@@ -544,6 +569,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                 const current = videoRef.current.currentTime
                 setCurrentTime(current)
                 onTimeUpdate?.(current)
+                onAnchorChange?.({ kind: 'timestamp', value: Math.floor(current) })
                 lastTimeUpdateRef.current = now
             }
         }
@@ -574,8 +600,11 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
         },
         getInternalVideo: () => {
             return videoRef.current
+        },
+        goToPage: (pageNumber) => {
+            setCurrentPdfPage(Math.max(1, Number(pageNumber) || 1))
         }
-    }), [])
+    }), [video, onAnchorChange])
 
     function handlePlay() {
         if (videoRef.current && videoRef.current.paused) return // Ignore if not actually playing
@@ -1250,6 +1279,7 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
     const progressPercent = isFinitePositiveDuration(duration)
         ? Math.max(0, Math.min(100, (currentTime / duration) * 100))
         : 0
+    const videoCheckpoints = checkpoints.filter(checkpoint => checkpoint.anchorKind === 'timestamp' && Number(checkpoint.anchorValue) >= 0)
 
     return (
         <div
@@ -1323,6 +1353,12 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                     <PDFViewer
                         fileUrl={videoUrl}
                         title={video.title}
+                        initialPage={initialAnchor?.kind === 'page' ? Math.max(1, Number(initialAnchor.value) || 1) : currentPdfPage}
+                        checkpoints={checkpoints}
+                        onPageChange={(page) => {
+                            setCurrentPdfPage(page)
+                            onAnchorChange?.({ kind: 'page', value: page })
+                        }}
                         onLoad={() => {
                             setIsLoading(false)
                             setError(null)
@@ -1484,6 +1520,25 @@ const VideoPlayer = forwardRef(function VideoPlayer({ video, onComplete, onNext,
                             className="absolute inset-y-0 left-0 bg-[var(--primary-fg)]"
                             style={{ width: `${progressPercent}%` }}
                         />
+                        {videoCheckpoints.map(checkpoint => {
+                            const percent = duration > 0 ? Math.max(0, Math.min(100, ((Number(checkpoint.anchorValue) || 0) / duration) * 100)) : 0
+                            return (
+                                <button
+                                    key={checkpoint.id}
+                                    type="button"
+                                    className="absolute top-1/2 h-3 w-3 -translate-y-1/2 rounded-full border border-white/80 shadow-sm"
+                                    style={{ left: `${percent}%`, marginLeft: '-6px', backgroundColor: CHECKPOINT_ACCENT[checkpoint.checkpointType] || '#ffffff' }}
+                                    title={`${checkpoint.checkpointType.replace('_', ' ')} marker`}
+                                    onClick={(event) => {
+                                        event.stopPropagation()
+                                        if (!videoRef.current) return
+                                        const targetTime = Number(checkpoint.anchorValue) || 0
+                                        videoRef.current.currentTime = targetTime
+                                        setCurrentTime(targetTime)
+                                    }}
+                                />
+                            )
+                        })}
                         <div
                             className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-[var(--primary-fg)] rounded-full opacity-0 group-hover/progress:opacity-100 transition-opacity"
                             style={{ left: `${progressPercent}%`, marginLeft: '-6px' }}

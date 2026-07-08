@@ -38,6 +38,8 @@ import youtubeRouter from './routes/youtube.js'
 import telegramRouter from './routes/telegram.js'
 import appRouter from './routes/app.js'
 import sourcesRouter from './routes/sources.js'
+import checkpointsRouter from './routes/checkpoints.js'
+import revisionQueueRouter from './routes/revisionQueue.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -152,6 +154,8 @@ app.use('/api/youtube', youtubeRouter)
 app.use('/api/telegram', telegramRouter)
 app.use('/api/app', appRouter)
 app.use('/api/sources', sourcesRouter)
+app.use('/api/checkpoints', checkpointsRouter)
+app.use('/api/revision-queue', revisionQueueRouter)
 
 // ============================================
 // STATIC FILE SERVING (PRODUCTION)

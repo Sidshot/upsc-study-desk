@@ -254,6 +254,7 @@ function runMigrations() {
         { name: '003_video_types', fn: migration003 },
         { name: '004_telegram_index', fn: migration004 },
         { name: '005_universal_source_import', fn: migration005 },
+        { name: '006_checkpoints_revision_queue', fn: migration006 },
     ]
 
     for (const migration of migrations) {
@@ -688,5 +689,59 @@ function migration005() {
 
     for (const stmt of statements) {
         db.run(stmt)
+    }
+}
+
+/**
+ * Migration 006: Checkpoints and global revision queue
+ */
+function migration006() {
+    const statements = [
+        `CREATE TABLE IF NOT EXISTS checkpoints (
+            id TEXT PRIMARY KEY,
+            course_id TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            note_id TEXT,
+            anchor_kind TEXT NOT NULL DEFAULT 'timestamp',
+            anchor_value TEXT,
+            checkpoint_type TEXT NOT NULL,
+            text TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+            FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE,
+            FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE SET NULL
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_checkpoints_video_anchor ON checkpoints(video_id, anchor_kind, created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_checkpoints_course_created ON checkpoints(course_id, created_at)`,
+        `CREATE INDEX IF NOT EXISTS idx_checkpoints_note ON checkpoints(note_id)`,
+        `CREATE TABLE IF NOT EXISTS revision_queue (
+            id TEXT PRIMARY KEY,
+            checkpoint_id TEXT,
+            course_id TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            note_id TEXT,
+            display_title TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            due_at TEXT NOT NULL,
+            urgency INTEGER NOT NULL DEFAULT 1,
+            origin TEXT NOT NULL DEFAULT 'checkpoint',
+            anchor_kind TEXT NOT NULL DEFAULT 'timestamp',
+            anchor_value TEXT,
+            checkpoint_type TEXT,
+            completed_at TEXT,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (checkpoint_id) REFERENCES checkpoints(id) ON DELETE CASCADE,
+            FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+            FOREIGN KEY (video_id) REFERENCES videos(id) ON DELETE CASCADE,
+            FOREIGN KEY (note_id) REFERENCES notes(id) ON DELETE SET NULL
+        )`,
+        `CREATE INDEX IF NOT EXISTS idx_revision_queue_status_due ON revision_queue(status, due_at, urgency)`,
+        `CREATE INDEX IF NOT EXISTS idx_revision_queue_video ON revision_queue(video_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_revision_queue_checkpoint ON revision_queue(checkpoint_id)`,
+        `CREATE INDEX IF NOT EXISTS idx_revision_queue_course ON revision_queue(course_id)`,
+    ]
+
+    for (const sql of statements) {
+        db.run(sql)
     }
 }

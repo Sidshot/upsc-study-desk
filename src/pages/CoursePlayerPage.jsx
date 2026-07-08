@@ -1,13 +1,38 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { ChevronLeft, Radio, RefreshCw, Trash2 } from 'lucide-react'
-import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree, deleteCourse } from '../utils/db'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
+import { ChevronLeft, Radio, RefreshCw, Trash2, Star, CircleHelp, Pin, RotateCcw } from 'lucide-react'
+import { getCourse, getModulesByCourse, getVideosByModule, updateCourse, getInstructorAvatarAsync, buildModuleTree, deleteCourse, addCheckpoint, getCheckpointsByVideo } from '../utils/db'
 import { getSourcesByCourse } from '../utils/sources'
 import { useSettings } from '../contexts/SettingsContext'
+import { useNotification } from '../contexts/NotificationContext'
 import LoadingSpinner from '../components/common/LoadingSpinner'
 import VideoPlayer from '../components/player/VideoPlayer'
 import PlaylistSidebar from '../components/player/PlaylistSidebar'
 import SourceUpdateModal from '../components/course/SourceUpdateModal'
+
+const CHECKPOINT_ACTIONS = [
+    { type: 'important', label: 'Important', icon: Star, classes: 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-200' },
+    { type: 'confusing', label: 'Confusing', icon: CircleHelp, classes: 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-200' },
+    { type: 'exam_worthy', label: 'Exam-worthy', icon: Pin, classes: 'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-400/20 dark:bg-sky-400/10 dark:text-sky-200' },
+    { type: 'revise', label: 'Revise', icon: RotateCcw, classes: 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-200' },
+]
+
+function isLectureLike(video) {
+    return !['pdf', 'image', 'audio', 'document', 'other'].includes(video?.type)
+}
+
+function parseRequestedAnchor(search) {
+    const params = new URLSearchParams(search)
+    const videoId = params.get('videoId')
+    const anchorKind = params.get('anchorKind')
+    const anchorValue = params.get('anchorValue')
+    if (!videoId || !anchorKind) return null
+    return {
+        videoId,
+        anchorKind,
+        anchorValue,
+    }
+}
 function findModulePath(modules, targetModuleId) {
     if (!modules || !targetModuleId) return []
 
@@ -56,7 +81,9 @@ async function fetchModulesWithVideos(courseId) {
 function CoursePlayerPage() {
     const { courseId } = useParams()
     const navigate = useNavigate()
+    const location = useLocation()
     const { settings } = useSettings()
+    const { showNotification } = useNotification()
     const [course, setCourse] = useState(null)
     const [modules, setModules] = useState([])
     const [currentVideo, setCurrentVideo] = useState(null)
@@ -72,8 +99,12 @@ function CoursePlayerPage() {
     const [instructorAvatar, setInstructorAvatar] = useState(null)
     const [sources, setSources] = useState([])
     const [sourceUpdateTarget, setSourceUpdateTarget] = useState(null)
+    const [currentAnchor, setCurrentAnchor] = useState({ kind: 'timestamp', value: 0 })
+    const [checkpoints, setCheckpoints] = useState([])
+    const [isSavingCheckpoint, setIsSavingCheckpoint] = useState(false)
     const videoRef = useRef(null)
     const ambientCanvasRef = useRef(null)
+    const requestedAnchor = useMemo(() => parseRequestedAnchor(location.search), [location.search])
 
     // ── Adaptive player sizing (YouTube-style JS-driven height) ──────────────
     // videoAspect: actual pixel dimensions reported by VideoPlayer after load.
@@ -174,6 +205,65 @@ function CoursePlayerPage() {
         }
     }, [course?.instructor])
 
+    useEffect(() => {
+        if (!currentVideo?.id) {
+            setCheckpoints([])
+            return
+        }
+
+        getCheckpointsByVideo(currentVideo.id)
+            .then(items => setCheckpoints(items || []))
+            .catch(err => console.error('Failed to load checkpoints:', err))
+    }, [currentVideo?.id])
+
+    useEffect(() => {
+        if (!requestedAnchor?.videoId || modules.length === 0) return
+        const allVideos = getAllVideosFlat(modules)
+        const requestedVideo = allVideos.find(video => video.id === requestedAnchor.videoId)
+        if (requestedVideo && requestedVideo.id !== currentVideo?.id) {
+            setAutoPlay(false)
+            setCurrentVideo(requestedVideo)
+        }
+    }, [requestedAnchor?.videoId, modules, currentVideo?.id])
+
+    useEffect(() => {
+        if (!currentVideo) return
+        if (currentVideo.type === 'pdf') {
+            setCurrentAnchor({
+                kind: 'page',
+                value: requestedAnchor?.videoId === currentVideo.id && requestedAnchor.anchorKind === 'page'
+                    ? Number(requestedAnchor.anchorValue) || 1
+                    : 1,
+            })
+            return
+        }
+
+        if (isLectureLike(currentVideo)) {
+            setCurrentAnchor({
+                kind: 'timestamp',
+                value: requestedAnchor?.videoId === currentVideo.id && requestedAnchor.anchorKind === 'timestamp'
+                    ? Number(requestedAnchor.anchorValue) || 0
+                    : 0,
+            })
+        }
+    }, [currentVideo?.id, currentVideo?.type, requestedAnchor])
+
+    useEffect(() => {
+        if (!requestedAnchor || requestedAnchor.videoId !== currentVideo?.id) return
+
+        if (requestedAnchor.anchorKind === 'page') {
+            videoRef.current?.goToPage?.(requestedAnchor.anchorValue)
+            return
+        }
+
+        if (requestedAnchor.anchorKind === 'timestamp') {
+            const time = Number(requestedAnchor.anchorValue)
+            if (Number.isFinite(time)) {
+                videoRef.current?.seekTo?.(time)
+            }
+        }
+    }, [requestedAnchor, currentVideo?.id])
+
     async function loadCourseData() {
         try {
             setIsLoading(true)
@@ -207,17 +297,23 @@ function CoursePlayerPage() {
                 }
 
                 if (allVideos.length > 0) {
+                    if (requestedAnchor?.videoId) {
+                        videoToPlay = allVideos.find(v => v.id === requestedAnchor.videoId) || null
+                    }
+
                     // Find the most recently watched video
                     let mostRecentVideo = null
-                    for (const video of allVideos) {
-                        if (video.lastWatchedAt) {
-                            if (!mostRecentVideo || new Date(video.lastWatchedAt) > new Date(mostRecentVideo.lastWatchedAt)) {
-                                mostRecentVideo = video
+                    if (!videoToPlay) {
+                        for (const video of allVideos) {
+                            if (video.lastWatchedAt) {
+                                if (!mostRecentVideo || new Date(video.lastWatchedAt) > new Date(mostRecentVideo.lastWatchedAt)) {
+                                    mostRecentVideo = video
+                                }
                             }
                         }
                     }
 
-                    if (mostRecentVideo) {
+                    if (!videoToPlay && mostRecentVideo) {
                         // If it's in progress, resume it
                         if (!mostRecentVideo.isCompleted && (mostRecentVideo.watchProgress || 0) < 0.95) {
                             videoToPlay = mostRecentVideo
@@ -257,6 +353,46 @@ function CoursePlayerPage() {
     function handleVideoSelect(video) {
         setAutoPlay(true) // Autoplay when manually selecting from playlist
         setCurrentVideo(video)
+    }
+
+    const canCheckpointCurrentVideo = Boolean(currentVideo && (currentVideo.type === 'pdf' || isLectureLike(currentVideo)))
+
+    async function handleCreateCheckpoint(checkpointType) {
+        if (!currentVideo || !canCheckpointCurrentVideo || isSavingCheckpoint) return
+
+        const anchorKind = currentVideo.type === 'pdf' ? 'page' : 'timestamp'
+        const rawValue = anchorKind === 'page'
+            ? Math.max(1, Number(currentAnchor.value) || 1)
+            : Math.max(0, Math.floor(Number(currentAnchor.value) || 0))
+
+        try {
+            setIsSavingCheckpoint(true)
+            const response = await addCheckpoint({
+                courseId,
+                videoId: currentVideo.id,
+                anchorKind,
+                anchorValue: String(rawValue),
+                checkpointType,
+            })
+            const nextCheckpoint = response?.checkpoint
+            if (nextCheckpoint) {
+                setCheckpoints(prev => {
+                    const merged = [...prev, nextCheckpoint]
+                    return merged.sort((a, b) => Number(a.anchorValue || 0) - Number(b.anchorValue || 0))
+                })
+            }
+            showNotification(
+                checkpointType === 'important'
+                    ? 'Checkpoint saved.'
+                    : 'Checkpoint saved and added to revision queue.',
+                'success'
+            )
+        } catch (err) {
+            console.error('Failed to save checkpoint:', err)
+            showNotification('Failed to save checkpoint: ' + err.message, 'error')
+        } finally {
+            setIsSavingCheckpoint(false)
+        }
     }
 
     // Lightweight refresh - only updates modules/videos data without reloading video player
@@ -500,7 +636,16 @@ function CoursePlayerPage() {
                                         onNext={handleNextVideo}
                                         onPrevious={handlePreviousVideo}
                                         autoPlay={autoPlay}
-                                        onTimeUpdate={setCurrentTime}
+                                        checkpoints={checkpoints}
+                                        initialAnchor={requestedAnchor?.videoId === currentVideo?.id ? {
+                                            kind: requestedAnchor.anchorKind,
+                                            value: requestedAnchor.anchorValue,
+                                        } : null}
+                                        onTimeUpdate={(time) => {
+                                            setCurrentTime(time)
+                                            setCurrentAnchor({ kind: 'timestamp', value: time })
+                                        }}
+                                        onAnchorChange={(anchor) => setCurrentAnchor(anchor)}
                                         onAspectRatioChange={(w, h) => setVideoAspect({ w, h })}
                                     />
                                 </div>
@@ -552,6 +697,24 @@ function CoursePlayerPage() {
                                         </div>
                                     )}
                                     <h2 className="text-lg sm:text-2xl font-bold mb-2">{currentVideo.title}</h2>
+                                    {canCheckpointCurrentVideo && (
+                                        <div className="flex flex-wrap gap-2">
+                                            {CHECKPOINT_ACTIONS.map(action => {
+                                                const Icon = action.icon
+                                                return (
+                                                    <button
+                                                        key={action.type}
+                                                        onClick={() => handleCreateCheckpoint(action.type)}
+                                                        disabled={isSavingCheckpoint}
+                                                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-60 ${action.classes}`}
+                                                    >
+                                                        <Icon className="h-3.5 w-3.5" />
+                                                        {action.label}
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
 
                                 <div className="pt-6 border-t border-light-border dark:border-dark-border">
