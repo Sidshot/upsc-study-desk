@@ -1,13 +1,8 @@
-import { pipeline, env } from '@xenova/transformers'
 import path from 'path'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-// Configure cache directory inside the main TutIn folder
-env.cacheDir = path.join(__dirname, '..', '..', 'models', 'ai')
-env.allowLocalModels = true
 
 /**
  * aiTranslation.js
@@ -33,6 +28,18 @@ const NLLB_LANG_MAP = {
     'th': 'tha_Thai'
 }
 
+async function loadTransformers() {
+    try {
+        const transformers = await import('@xenova/transformers')
+        transformers.env.cacheDir = path.join(__dirname, '..', '..', 'models', 'ai')
+        transformers.env.allowLocalModels = true
+        return transformers
+    } catch (err) {
+        console.error('AI translation engine failed to load:', err)
+        throw new Error(`AI translation is unavailable because the local translation engine could not load: ${err.message}`)
+    }
+}
+
 export async function translateChunks(chunks, targetLanguage, apiKey, modelParams, onProgress, req) {
     const modelId = `Xenova/nllb-200-distilled-600M`
     const tgt_lang = NLLB_LANG_MAP[targetLanguage]
@@ -49,6 +56,7 @@ export async function translateChunks(chunks, targetLanguage, apiKey, modelParam
 
     let translator
     try {
+        const { pipeline } = await loadTransformers()
         translator = await pipeline('translation', modelId, {
             progress_callback: (progress) => {
                 if (progress.status === 'progress' || progress.status === 'downloading') {
